@@ -1,6 +1,6 @@
 import { useAuth0 } from '@auth0/auth0-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@ytclipper/ui';
-import { Routes, Route } from 'react-router';
+import { Card, CardContent, CardHeader, CardTitle } from '@ytclipper/ui';
+import { Route, Routes } from 'react-router';
 
 import Loading from '@/components/loading';
 import ProtectedRoute from '@/components/protected-route';
@@ -64,6 +64,6 @@ const App = () => {
       <Route path='*' element={<HomePage />} />
     </Routes>
   );
-}
+};
 
 export default App;

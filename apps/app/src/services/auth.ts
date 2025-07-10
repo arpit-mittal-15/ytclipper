@@ -1,3 +1,4 @@
+import config from '@/config';
 import { useEffect } from 'react';
 
 import { useAuth0 } from '@auth0/auth0-react';
@@ -8,7 +9,6 @@ export function useAuthMessageListener() {
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      // Security: Only respond to messages from same origin or your extension
       if (
         event.origin !== window.location.origin &&
         !event.origin.startsWith('chrome-extension://')
@@ -20,12 +20,11 @@ export function useAuthMessageListener() {
         try {
           let accessToken = null;
 
-          // Only get token if user is authenticated and not loading
           if (isAuthenticated && !isLoading) {
             try {
               accessToken = await getAccessTokenSilently({
                 authorizationParams: {
-                  audience: 'your-auth0-audience', // Replace with your Auth0 audience
+                  audience: config.auth0Audience,
                   scope: 'openid profile email',
                 },
               });
@@ -34,7 +33,6 @@ export function useAuthMessageListener() {
             }
           }
 
-          // Send back auth status
           const response = {
             type: 'AUTH_STATUS_RESPONSE',
             isAuthenticated: isAuthenticated && !isLoading,
@@ -44,11 +42,9 @@ export function useAuthMessageListener() {
             timestamp: Date.now(),
           };
 
-          // Handle both window.postMessage and chrome.runtime.sendMessage
           if (event.source) {
-            event.source.postMessage(response, event.origin);
+            event.source.postMessage(response, { targetOrigin: event.origin });
           } else {
-            // For extension communication
             window.postMessage(response, '*');
           }
         } catch (error) {
@@ -62,7 +58,9 @@ export function useAuthMessageListener() {
           };
 
           if (event.source) {
-            event.source.postMessage(errorResponse, event.origin);
+            event.source.postMessage(errorResponse, {
+              targetOrigin: event.origin,
+            });
           } else {
             window.postMessage(errorResponse, '*');
           }

@@ -1,9 +1,9 @@
 import { logger } from '@ytclipper/extension-dev-utils';
 
 import type {
+  AuthResponse,
   LoginCredentials,
   RegisterCredentials,
-  AuthResponse,
   User,
 } from '../types/auth';
 
@@ -14,7 +14,7 @@ class AuthService {
   // Login user with email and password (accept any credentials)
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 400));
     const fakeUser: User = {
       id: credentials.email,
       email: credentials.email,
@@ -34,7 +34,7 @@ class AuthService {
   // Register new user (accept any credentials)
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 400));
     const fakeUser: User = {
       id: credentials.email,
       email: credentials.email,
@@ -54,7 +54,7 @@ class AuthService {
   // Always verify token as valid in dev mode
   async verifyToken(token: string): Promise<AuthResponse> {
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
     const { user } = await this.getStoredAuthData();
     if (user) {
       return {
