@@ -1,223 +1,55 @@
-import React, { useEffect, useState } from 'react';
+console.log('[YTClipper UI] content-ui script loaded');
 
-import { createRoot } from 'react-dom/client';
-
-const TimestampCollector: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [title, setTitle] = useState('');
-  const [note, setNote] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    // Listen for messages from content script
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'SHOW_TIMESTAMP_COLLECTOR') {
-        setCurrentTime(event.data.currentTime);
-        setIsVisible(true);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  const handleSave = async () => {
-    setIsLoading(true);
-
-    try {
-      // Send message to content script to save timestamp
-      window.postMessage(
-        {
-          type: 'SAVE_TIMESTAMP_FROM_UI',
-          data: {
-            timestamp: currentTime,
-            title: title || `Timestamp at ${formatTime(currentTime)}`,
-            note,
-          },
-        },
-        '*',
-      );
-
-      // Reset form and hide
-      setTitle('');
-      setNote('');
-      setIsVisible(false);
-    } catch (error) {
-      console.error('Failed to save timestamp:', error);
-    } finally {
-      setIsLoading(false);
+function waitForPlayerContainer(callback: (container: HTMLElement) => void) {
+  const interval = setInterval(() => {
+    const playerContainer = document.querySelector('.html5-video-player') as HTMLElement;
+    if (playerContainer) {
+      clearInterval(interval);
+      callback(playerContainer);
     }
-  };
+  }, 500);
+}
 
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
+function createOverlayButton() {
+  const button = document.createElement('button');
+  button.innerText = '⏱️ Clip';
+  button.title = 'Save timestamp';
+  button.id = 'ytclipper-overlay-button';
 
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
+  Object.assign(button.style, {
+    position: 'absolute',
+    bottom: '60px',
+    right: '20px',
+    zIndex: '10000',
+    padding: '8px 14px',
+    backgroundColor: '#ff6b35',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+    transition: 'opacity 0.2s',
+  });
 
-  if (!isVisible) return null;
+  button.addEventListener('click', () => {
+    console.log('[YTClipper UI] Button clicked');
+    window.postMessage({ type: 'YTCLIPPER_UI_SAVE_TIMESTAMP' }, '*');
+  });
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        width: '320px',
-        background: 'white',
-        border: '1px solid #e5e5e5',
-        borderRadius: '12px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-        zIndex: 10000,
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      <div
-        style={{
-          padding: '16px',
-          borderBottom: '1px solid #f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>clock</span>
-          <span style={{ fontWeight: '600', color: '#1a1a1a' }}>
-            Add Timestamp
-          </span>
-        </div>
-        <button
-          onClick={() => setIsVisible(false)}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px',
-            borderRadius: '4px',
-            color: '#666',
-          }}
-        >
-          <span>x</span>
-        </button>
-      </div>
+  return button;
+}
 
-      <div style={{ padding: '16px' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <div
-            style={{
-              padding: '8px 12px',
-              background: '#fff5f2',
-              border: '1px solid #ff6b35',
-              borderRadius: '6px',
-              color: '#ff6b35',
-              fontFamily: 'Monaco, Menlo, monospace',
-              fontWeight: '600',
-              textAlign: 'center',
-              fontSize: '14px',
-            }}
-          >
-            {formatTime(currentTime)}
-          </div>
-        </div>
+function injectOverlayButton(playerContainer: HTMLElement) {
+  if (document.getElementById('ytclipper-overlay-button')) return;
 
-        <div style={{ marginBottom: '12px' }}>
-          <input
-            type='text'
-            placeholder='Timestamp title (optional)'
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontFamily: 'inherit',
-            }}
-          />
-        </div>
+  const button = createOverlayButton();
+  playerContainer.appendChild(button);
+  console.log('[YTClipper UI] Button injected');
+}
 
-        <div style={{ marginBottom: '16px' }}>
-          <textarea
-            placeholder='Notes about this timestamp...'
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-              minHeight: '60px',
-            }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={handleSave}
-            disabled={isLoading}
-            style={{
-              flex: '1',
-              padding: '10px',
-              background: '#ff6b35',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontWeight: '500',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.7 : 1,
-              fontSize: '14px',
-            }}
-          >
-            {isLoading ? 'Saving...' : 'Save Timestamp'}
-          </button>
-          <button
-            onClick={() => setIsVisible(false)}
-            style={{
-              padding: '10px 16px',
-              background: '#f5f5f5',
-              color: '#666',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Create and mount the component
-const createTimestampCollector = () => {
-  const container = document.createElement('div');
-  container.id = 'ytclipper-timestamp-collector';
-  document.body.appendChild(container);
-
-  const root = createRoot(container);
-  root.render(<TimestampCollector />);
-
-  return {
-    container,
-    root,
-  };
-};
-
-// Export for proper React Fast Refresh support
-export { TimestampCollector, createTimestampCollector };
-
-// Initialize when content script requests it
-createTimestampCollector();
+// Run
+waitForPlayerContainer((container) => {
+  injectOverlayButton(container);
+});

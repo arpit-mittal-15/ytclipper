@@ -1,26 +1,28 @@
 export default {
-  // Basic formatting
-  semi: true,
+  // Basic formatting - STRICT
+  semi: true, // Mandatory semicolons
   singleQuote: true,
   quoteProps: 'as-needed',
   trailingComma: 'all',
 
-  // Indentation and spacing
+  // Indentation and spacing - STRICT
   tabWidth: 2,
   useTabs: false,
   printWidth: 80,
+  bracketSpacing: true, // { hello } instead of {hello}
 
-  // JSX formatting
+  // JSX formatting - STRICT
   jsxSingleQuote: true,
   jsxBracketSameLine: false,
 
-  // Other formatting options
-  arrowParens: 'avoid',
-  bracketSpacing: true,
+  // Other formatting options - STRICT
+  arrowParens: 'always', // (x) => x instead of x => x
+  bracketSameLine: false,
   endOfLine: 'lf',
   insertPragma: false,
   proseWrap: 'preserve',
   requirePragma: false,
+  embeddedLanguageFormatting: 'auto',
 
   // File-specific overrides
   overrides: [
@@ -35,6 +37,7 @@ export default {
       files: '*.json',
       options: {
         printWidth: 120,
+        trailingComma: 'none',
       },
     },
     {

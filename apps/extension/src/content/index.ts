@@ -1,4 +1,3 @@
-import { logger } from '@ytclipper/extension-dev-utils';
 import './content.css';
 import './style.css';
 
@@ -18,22 +17,20 @@ interface YouTubePageData {
   currentTime: number;
 }
 
-// Content script for YouTube pages
-logger.info('YTClipper content script loaded');
-
 class YouTubeHandler {
   private player: HTMLVideoElement | null = null;
   private currentVideoId: string | null = null;
   private observers: MutationObserver[] = [];
   private floatingButton: HTMLDivElement | null = null;
   private floatingButtonTimeout: number | null = null;
-  private isAuthenticated: boolean = false;
+  private isAuthenticated: boolean = true;
 
   constructor() {
     this.init();
   }
 
   private init() {
+    console.log('YouTube Handler initialized');
     this.checkAuthentication();
     this.waitForPlayer();
     this.observeUrlChanges();
@@ -61,9 +58,8 @@ class YouTubeHandler {
         'currentUser',
       ]);
       this.isAuthenticated = !!(result.authToken && result.currentUser);
-      logger.info('Authentication status:', this.isAuthenticated);
     } catch (error) {
-      logger.error('Failed to check authentication:', error);
+      console.error("Failed to check authentication:", error);
       this.isAuthenticated = false;
     }
   }
@@ -72,7 +68,6 @@ class YouTubeHandler {
     const checkPlayer = () => {
       this.player = document.querySelector('video') as HTMLVideoElement;
       if (this.player) {
-        logger.info('YouTube player found');
         this.setupPlayerEvents();
         this.detectVideoChange();
       } else {
@@ -227,7 +222,6 @@ class YouTubeHandler {
 
     if (videoId && videoId !== this.currentVideoId) {
       this.currentVideoId = videoId;
-      logger.info('Video changed:', videoId);
       this.hideFloatingButton(); // Hide floating button when video changes
       this.loadTimestamps();
     }
@@ -246,7 +240,7 @@ class YouTubeHandler {
         this.displayTimestamps(response.timestamps);
       }
     } catch (error) {
-      logger.error('Failed to load timestamps:', error);
+      console.error('Failed to load timestamps:', error);
     }
   }
 
@@ -289,7 +283,7 @@ class YouTubeHandler {
     container.appendChild(marker);
   }
 
-  private async saveQuickTimestamp() {
+  async saveQuickTimestamp() {
     if (!this.player || !this.currentVideoId) return;
 
     const pageData = this.getPageData();
@@ -314,7 +308,7 @@ class YouTubeHandler {
         this.showNotification('Failed to save timestamp', 'error');
       }
     } catch (error) {
-      logger.error('Failed to save timestamp:', error);
+      console.log('Error saving timestamp:', error);
       this.showNotification('Failed to save timestamp', 'error');
     }
   }
@@ -396,3 +390,13 @@ const youtubeHandler = new YouTubeHandler();
 window.addEventListener('beforeunload', () => {
   youtubeHandler.destroy();
 });
+
+window.addEventListener('message', event => {
+  if (event.source !== window) return;
+
+  if (event.data?.type === 'YTCLIPPER_UI_SAVE_TIMESTAMP') {
+    console.log('[YTClipper] Received timestamp save trigger from UI');
+    youtubeHandler.saveQuickTimestamp?.(); // expose method if needed
+  }
+}
+);

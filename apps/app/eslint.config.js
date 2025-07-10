@@ -1,3 +1,13 @@
-import config from '@ytclipper/eslint-config/react.js';
+import reactConfig from '@ytclipper/eslint-config/react.js';
 
-export default config;
+export default [
+  ...reactConfig,
+  {
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+];
