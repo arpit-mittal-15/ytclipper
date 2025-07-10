@@ -13,7 +13,7 @@ export default {
 
   // JSX formatting - STRICT
   jsxSingleQuote: true,
-  jsxBracketSameLine: false,
+  bracketSameLine: false, // Replaces deprecated jsxBracketSameLine
 
   // Other formatting options - STRICT
   arrowParens: 'always', // (x) => x instead of x => x

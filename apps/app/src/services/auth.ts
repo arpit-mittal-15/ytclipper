@@ -1,15 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
 import { useAuth0 } from '@auth0/auth0-react';
 
 export function useAuthMessageListener() {
-  const { isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, isLoading, user, getAccessTokenSilently } =
+    useAuth0();
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       // Security: Only respond to messages from same origin or your extension
-      if (event.origin !== window.location.origin &&
-          !event.origin.startsWith('chrome-extension://')) {
+      if (
+        event.origin !== window.location.origin &&
+        !event.origin.startsWith('chrome-extension://')
+      ) {
         return;
       }
 
@@ -23,8 +26,8 @@ export function useAuthMessageListener() {
               accessToken = await getAccessTokenSilently({
                 authorizationParams: {
                   audience: 'your-auth0-audience', // Replace with your Auth0 audience
-                  scope: 'openid profile email'
-                }
+                  scope: 'openid profile email',
+                },
               });
             } catch (tokenError) {
               console.error('Error getting access token:', tokenError);
@@ -38,7 +41,7 @@ export function useAuthMessageListener() {
             isLoading,
             user: user || null,
             accessToken,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
 
           // Handle both window.postMessage and chrome.runtime.sendMessage
@@ -55,7 +58,7 @@ export function useAuthMessageListener() {
             isAuthenticated: false,
             isLoading: false,
             error,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
 
           if (event.source) {
@@ -67,7 +70,7 @@ export function useAuthMessageListener() {
       }
     };
 
-    window.addEventListener('message', handleMessage)
+    window.addEventListener('message', handleMessage);
 
     return () => {
       window.removeEventListener('message', handleMessage);

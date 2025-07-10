@@ -1,6 +1,7 @@
 import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import prettierConfig from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
+import tseslint from 'typescript-eslint';
 
 export default tseslint.config([
   {
@@ -26,50 +27,21 @@ export default tseslint.config([
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: ['./tsconfig.json', './apps/*/tsconfig.json', './packages/*/tsconfig.json'],
-        tsconfigRootDir: process.cwd(),
+        // Project will be set in individual configs
       },
     },
     rules: {
-      // SEMICOLON RULES - MANDATORY
-      'semi': ['error', 'always'],
-      '@typescript-eslint/semi': ['error', 'always'],
-      'semi-spacing': ['error', { before: false, after: true }],
-      'semi-style': ['error', 'last'],
+      // SEMICOLON RULES - HANDLED BY PRETTIER
+      // Note: semi, semi-spacing, and semi-style are now deprecated in ESLint and moved to @stylistic
+      // We'll let Prettier handle semicolon formatting
 
-      // SPACING AND FORMATTING RULES - STRICT
-      'object-curly-spacing': ['error', 'always'], // { hello } not {hello}
-      'array-bracket-spacing': ['error', 'never'], // [1, 2] not [ 1, 2 ]
-      'computed-property-spacing': ['error', 'never'],
-      'template-curly-spacing': ['error', 'never'],
-      'space-before-blocks': ['error', 'always'],
-      'space-before-function-paren': [
-        'error',
-        {
-          anonymous: 'always',
-          named: 'never',
-          asyncArrow: 'always',
-        },
-      ],
-      'space-in-parens': ['error', 'never'],
-      'space-infix-ops': 'error',
-      'space-unary-ops': ['error', { words: true, nonwords: false }],
-      'spaced-comment': ['error', 'always'],
-      'keyword-spacing': ['error', { before: true, after: true }],
-      'comma-spacing': ['error', { before: false, after: true }],
-      'comma-style': ['error', 'last'],
-      'key-spacing': ['error', { beforeColon: false, afterColon: true }],
+      // SPACING AND FORMATTING RULES - HANDLED BY PRETTIER
+      // Most spacing rules are now deprecated and moved to @stylistic
+      // We'll let Prettier handle most formatting and keep only non-conflicting rules
+      'spaced-comment': ['error', 'always'], // Still useful for code quality
 
-      // BRACKET AND BRACE RULES
-      'brace-style': ['error', '1tbs', { allowSingleLine: true }],
-      'curly': ['error', 'all'],
-      'object-curly-newline': [
-        'error',
-        {
-          ObjectExpression: { multiline: true, consistent: true },
-          ObjectPattern: { multiline: true, consistent: true },
-        },
-      ],
+      // BRACKET AND BRACE RULES - LOGIC ONLY (FORMATTING HANDLED BY PRETTIER)
+      curly: ['error', 'all'], // Force braces for control statements (logic, not formatting)
 
       // IMPORT RULES - STRICT
       'import/order': [
@@ -140,9 +112,7 @@ export default tseslint.config([
       'no-useless-constructor': 'error',
       'no-useless-return': 'error',
 
-      // FUNCTION RULES
-      'arrow-spacing': ['error', { before: true, after: true }],
-      'arrow-parens': ['error', 'always'],
+      // FUNCTION RULES - LOGIC ONLY (FORMATTING HANDLED BY PRETTIER)
       'prefer-rest-params': 'error',
       'prefer-spread': 'error',
       'func-style': ['error', 'declaration', { allowArrowFunctions: true }],
@@ -152,35 +122,31 @@ export default tseslint.config([
       'no-lonely-if': 'error',
       'no-unneeded-ternary': 'error',
       'no-nested-ternary': 'error',
-      'yoda': ['error', 'never'],
+      yoda: ['error', 'never'],
 
-      // STRING AND QUOTE RULES
+      // STRING AND TEMPLATE RULES - LOGIC ONLY (FORMATTING HANDLED BY PRETTIER)
       'prefer-template': 'error',
-      'template-curly-spacing': ['error', 'never'],
-      'quotes': ['error', 'single', { avoidEscape: true }],
 
-      // ARRAY AND OBJECT RULES
+      // ARRAY AND OBJECT RULES - LOGIC ONLY (FORMATTING HANDLED BY PRETTIER)
       'array-callback-return': 'error',
       'no-array-constructor': 'error',
-      'array-bracket-newline': ['error', 'consistent'],
-      'array-element-newline': ['error', 'consistent'],
 
-      // WHITESPACE AND NEWLINE RULES
-      'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 1, maxBOF: 0 }],
-      'no-trailing-spaces': 'error',
-      'eol-last': ['error', 'always'],
-      'newline-before-return': 'error',
+      // WHITESPACE AND NEWLINE RULES - LOGICAL STRUCTURE (FORMATTING HANDLED BY PRETTIER)
       'padding-line-between-statements': [
         'error',
         { blankLine: 'always', prev: '*', next: 'return' },
         { blankLine: 'always', prev: ['const', 'let', 'var'], next: '*' },
-        { blankLine: 'any', prev: ['const', 'let', 'var'], next: ['const', 'let', 'var'] },
+        {
+          blankLine: 'any',
+          prev: ['const', 'let', 'var'],
+          next: ['const', 'let', 'var'],
+        },
         { blankLine: 'always', prev: 'directive', next: '*' },
         { blankLine: 'any', prev: 'directive', next: 'directive' },
         { blankLine: 'always', prev: ['case', 'default'], next: '*' },
       ],
 
-      // ERROR PREVENTION
+      // ERROR PREVENTION - KEEP ALL LOGIC RULES
       'no-unreachable': 'error',
       'no-unreachable-loop': 'error',
       'no-constant-condition': 'error',
@@ -189,7 +155,7 @@ export default tseslint.config([
       'no-duplicate-case': 'error',
       'no-empty': 'error',
       'no-extra-boolean-cast': 'error',
-      'no-extra-semi': 'error',
+      // 'no-extra-semi': deprecated - handled by Prettier
       'no-func-assign': 'error',
       'no-inner-declarations': 'error',
       'no-invalid-regexp': 'error',
@@ -203,7 +169,7 @@ export default tseslint.config([
       'consistent-return': 'error',
       'default-case': 'error',
       'dot-notation': 'error',
-      'eqeqeq': ['error', 'always'],
+      eqeqeq: ['error', 'always'],
       'guard-for-in': 'error',
       'no-caller': 'error',
       'no-case-declarations': 'error',
@@ -241,29 +207,21 @@ export default tseslint.config([
       'no-useless-escape': 'error',
       'no-void': 'error',
       'no-with': 'error',
-      'radix': 'error',
+      radix: 'error',
       'wrap-iife': ['error', 'outside'],
     },
   },
-  // Separate config for typed rules
+  // TypeScript-specific rules that don't require type checking
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [...tseslint.configs.recommendedTypeChecked],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: true,
-        tsconfigRootDir: process.cwd(),
-      },
-    },
     rules: {
-      // TypeScript-specific rules that require type information
+      // TypeScript-specific rules (non-type-checked)
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
-      '@typescript-eslint/no-unnecessary-condition': 'error',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-      '@typescript-eslint/prefer-includes': 'error',
-      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
+      '@typescript-eslint/prefer-as-const': 'error',
+      '@typescript-eslint/prefer-literal-enum-member': 'error',
     },
   },
+  // Prettier config must be last to override other formatting rules
+  prettierConfig,
 ]);

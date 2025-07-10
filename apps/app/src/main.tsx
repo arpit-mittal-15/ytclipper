@@ -10,16 +10,19 @@ import config from '@/config.ts';
 import App from './App.tsx';
 
 const { auth0Domain, auth0ClientId, auth0Audience } = config;
+
 console.log('Config:', config);
 
 const onRedirectCallback = (appState: AppState | undefined) => {
   const url = new URL(window.location.href);
+
   url.searchParams.delete('code');
   url.searchParams.delete('state');
   url.searchParams.delete('error');
   url.searchParams.delete('error_description');
 
   const returnTo = appState?.returnTo || '/dashboard';
+
   window.history.replaceState({}, document.title, returnTo);
 };
 

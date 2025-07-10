@@ -10,22 +10,22 @@ import LoginPage from '@/pages/login';
 import ProfilePage from '@/pages/profile';
 import { useAuthMessageListener } from '@/services/auth';
 
-function App() {
-  const { isLoading, error
+const App = () => {
+  const { isLoading, error } = useAuth0();
 
-   } = useAuth0();
   useAuthMessageListener();
 
   if (error) {
     console.error('Auth0 Error:', error);
+
     return (
-      <div className="p-8">
-        <Card className="max-w-md mx-auto">
+      <div className='p-8'>
+        <Card className='max-w-md mx-auto'>
           <CardHeader>
-            <CardTitle className="text-red-600">Authentication Error</CardTitle>
+            <CardTitle className='text-red-600'>Authentication Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-red-600">{error.message}</p>
+            <p className='text-red-600'>{error.message}</p>
           </CardContent>
         </Card>
       </div>
@@ -39,12 +39,12 @@ function App() {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path='/' element={<HomePage />} />
+      <Route path='/login' element={<LoginPage />} />
 
       {/* Protected Routes */}
       <Route
-        path="/dashboard"
+        path='/dashboard'
         element={
           <ProtectedRoute>
             <DashboardPage />
@@ -52,7 +52,7 @@ function App() {
         }
       />
       <Route
-        path="/profile"
+        path='/profile'
         element={
           <ProtectedRoute>
             <ProfilePage />
@@ -61,7 +61,7 @@ function App() {
       />
 
       {/* Catch all route - redirect to home */}
-      <Route path="*" element={<HomePage />} />
+      <Route path='*' element={<HomePage />} />
     </Routes>
   );
 }

@@ -46,7 +46,7 @@ export default [
       'react/require-render-return': 'error',
       'react/self-closing-comp': ['error', { component: true, html: true }],
 
-      // JSX FORMATTING RULES - STRICT
+      // JSX FORMATTING RULES - LOGIC ONLY (FORMATTING HANDLED BY PRETTIER)
       'react/jsx-boolean-value': ['error', 'never'],
       'react/jsx-curly-brace-presence': [
         'error',
@@ -56,39 +56,8 @@ export default [
           propElementValues: 'always',
         },
       ],
-      'react/jsx-curly-spacing': [
-        'error',
-        {
-          when: 'always',
-          children: { when: 'always' },
-          attributes: { when: 'always' },
-        },
-      ],
-      'react/jsx-equals-spacing': ['error', 'never'],
       'react/jsx-fragments': ['error', 'syntax'],
       'react/jsx-no-useless-fragment': ['error', { allowExpressions: true }],
-      'react/jsx-props-no-multi-spaces': 'error',
-      'react/jsx-tag-spacing': [
-        'error',
-        {
-          closingSlash: 'never',
-          beforeSelfClosing: 'always',
-          afterOpening: 'never',
-          beforeClosing: 'never',
-        },
-      ],
-      'react/jsx-wrap-multilines': [
-        'error',
-        {
-          declaration: 'parens-new-line',
-          assignment: 'parens-new-line',
-          return: 'parens-new-line',
-          arrow: 'parens-new-line',
-          condition: 'parens-new-line',
-          logical: 'parens-new-line',
-          prop: 'parens-new-line',
-        },
-      ],
 
       // REACT HOOKS RULES - STRICT
       'react-hooks/rules-of-hooks': 'error',

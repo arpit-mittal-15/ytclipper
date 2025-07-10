@@ -41,6 +41,7 @@ const UserProfile = () => {
 
       if (response.ok) {
         const data = await response.json();
+
         console.log('Backend response:', data);
       }
     } catch (error) {
@@ -54,15 +55,13 @@ const UserProfile = () => {
         <CardTitle>User Profile</CardTitle>
       </CardHeader>
       <CardContent className='space-y-4'>
-        {user.picture && (
-          <div className='flex justify-center'>
+        {user.picture ? <div className='flex justify-center'>
             <img
               src={user.picture}
               alt={user.name || 'User'}
               className='w-20 h-20 rounded-full border-2 border-gray-200'
             />
-          </div>
-        )}
+          </div> : null}
 
         <div className='space-y-3'>
           <div className='border-b pb-2'>
@@ -74,11 +73,9 @@ const UserProfile = () => {
             <label className='text-sm font-medium text-gray-500'>Email</label>
             <div className='flex items-center space-x-2'>
               <p className='text-base'>{user.email || 'Not provided'}</p>
-              {user.email_verified && (
-                <span className='px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full'>
+              {user.email_verified ? <span className='px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full'>
                   ✓ Verified
-                </span>
-              )}
+                </span> : null}
             </div>
           </div>
 

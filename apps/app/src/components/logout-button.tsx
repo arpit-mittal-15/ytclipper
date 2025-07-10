@@ -5,11 +5,7 @@ const LogoutButton = () => {
   const { logout, isAuthenticated, isLoading } = useAuth0();
 
   if (isLoading) {
-    return (
-      <Button disabled>
-        Loading...
-      </Button>
-    );
+    return <Button disabled>Loading...</Button>;
   }
 
   if (!isAuthenticated) {
@@ -18,13 +14,15 @@ const LogoutButton = () => {
 
   return (
     <Button
-      onClick={() => logout({
-        logoutParams: {
-          returnTo: window.location.origin
-        }
-      })}
-      variant="outline"
-      className="border-red-500 text-red-500 hover:bg-red-50"
+      onClick={() =>
+        logout({
+          logoutParams: {
+            returnTo: window.location.origin,
+          },
+        })
+      }
+      variant='outline'
+      className='border-red-500 text-red-500 hover:bg-red-50'
     >
       Log Out
     </Button>
