@@ -1,10 +1,10 @@
 import { useAuth0 } from '@auth0/auth0-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@ytclipper/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@ytclipper/ui';
 import { Navigate, useLocation } from 'react-router';
 
 import LoginButton from '../components/login-button';
 
-export default function LoginPage() {
+const LoginPage = () => {
   const { isAuthenticated } = useAuth0();
   const location = useLocation();
 
@@ -33,4 +33,6 @@ export default function LoginPage() {
       </Card>
     </div>
   );
-}
+};
+
+export default LoginPage;

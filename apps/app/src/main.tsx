@@ -4,8 +4,8 @@ import { Auth0Provider, type AppState } from '@auth0/auth0-react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 
-import './index.css';
 import config from '@/config.ts';
+import './index.css';
 
 import App from './App.tsx';
 
@@ -26,7 +26,13 @@ const onRedirectCallback = (appState: AppState | undefined) => {
   window.history.replaceState({}, document.title, returnTo);
 };
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Root element not found');
+}
+
+createRoot(rootElement).render(
   <StrictMode>
     <Auth0Provider
       domain={auth0Domain}

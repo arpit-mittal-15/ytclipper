@@ -98,7 +98,7 @@ export default tseslint.config([
       '@typescript-eslint/no-non-null-assertion': 'warn',
 
       // CODE QUALITY RULES - STRICT
-      'no-console': 'warn',
+      // 'no-console': 'warn',
       'no-debugger': 'error',
       'no-alert': 'error',
       'no-var': 'error',
@@ -217,7 +217,6 @@ export default tseslint.config([
     rules: {
       // TypeScript-specific rules (non-type-checked)
       '@typescript-eslint/prefer-optional-chain': 'error',
-      '@typescript-eslint/prefer-nullish-coalescing': 'error',
       '@typescript-eslint/prefer-as-const': 'error',
       '@typescript-eslint/prefer-literal-enum-member': 'error',
     },

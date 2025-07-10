@@ -57,9 +57,10 @@ class YouTubeHandler {
         'authToken',
         'currentUser',
       ]);
+
       this.isAuthenticated = !!(result.authToken && result.currentUser);
     } catch (error) {
-      console.error("Failed to check authentication:", error);
+      console.error('Failed to check authentication:', error);
       this.isAuthenticated = false;
     }
   }
@@ -74,6 +75,7 @@ class YouTubeHandler {
         setTimeout(checkPlayer, 1000);
       }
     };
+
     checkPlayer();
   }
 
@@ -81,7 +83,7 @@ class YouTubeHandler {
     if (!this.player) return;
 
     // Add keyboard shortcut for quick timestamp saving (Ctrl+Shift+T)
-    document.addEventListener('keydown', e => {
+    document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'T') {
         e.preventDefault();
         this.saveQuickTimestamp();
@@ -128,7 +130,7 @@ class YouTubeHandler {
   }
 
   private createFloatingButtonHTML(): string {
-    const currentTime = this.player?.currentTime || 0;
+    const currentTime = this.player?.currentTime ?? 0;
     const formattedTime = this.formatTime(currentTime);
 
     return `
@@ -161,7 +163,7 @@ class YouTubeHandler {
   private setupFloatingButtonEvents() {
     if (!this.floatingButton) return;
 
-    this.floatingButton.addEventListener('click', e => {
+    this.floatingButton.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       const button = target.closest('button') as HTMLButtonElement;
       const action = button?.dataset.action;
@@ -170,11 +172,17 @@ class YouTubeHandler {
         case 'quick-add':
           this.handleQuickAddFromFloat();
           break;
+
         case 'detailed-add':
           this.handleDetailedAddFromFloat();
           break;
+
         case 'close':
           this.hideFloatingButton();
+          break;
+
+        default:
+          // Unknown action, do nothing
           break;
       }
     });
@@ -248,12 +256,13 @@ class YouTubeHandler {
     // Remove existing timestamp markers
     document
       .querySelectorAll('.ytclipper-timestamp')
-      .forEach(el => el.remove());
+      .forEach((el) => el.remove());
 
     // Add timestamp markers to the video progress bar
     const progressBar = document.querySelector('.ytp-progress-bar-container');
+
     if (progressBar && timestamps.length > 0) {
-      timestamps.forEach(timestamp => {
+      timestamps.forEach((timestamp) => {
         this.addTimestampMarker(timestamp, progressBar as HTMLElement);
       });
     }
@@ -261,6 +270,7 @@ class YouTubeHandler {
 
   private addTimestampMarker(timestamp: Timestamp, container: HTMLElement) {
     const marker = document.createElement('div');
+
     marker.className = 'ytclipper-timestamp';
     marker.title = `${timestamp.title} - ${this.formatTime(timestamp.timestamp)}`;
     marker.style.cssText = `
@@ -271,7 +281,7 @@ class YouTubeHandler {
       background-color: #ff6b35;
       cursor: pointer;
       z-index: 1000;
-      left: ${(timestamp.timestamp / (this.player?.duration || 1)) * 100}%;
+      left: ${(timestamp.timestamp / (this.player?.duration ?? 1)) * 100}%;
     `;
 
     marker.addEventListener('click', () => {
@@ -287,6 +297,7 @@ class YouTubeHandler {
     if (!this.player || !this.currentVideoId) return;
 
     const pageData = this.getPageData();
+
     if (!pageData) return;
 
     try {
@@ -319,7 +330,7 @@ class YouTubeHandler {
     const titleElement = document.querySelector(
       'h1.ytd-watch-metadata yt-formatted-string',
     );
-    const title = titleElement?.textContent || 'Unknown Video';
+    const title = titleElement?.textContent ?? 'Unknown Video';
 
     return {
       videoId: this.currentVideoId,
@@ -336,6 +347,7 @@ class YouTubeHandler {
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
+
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   }
 
@@ -344,6 +356,7 @@ class YouTubeHandler {
     type: 'success' | 'error' = 'success',
   ) {
     const notification = document.createElement('div');
+
     notification.className = 'ytclipper-notification';
     notification.textContent = message;
     notification.style.cssText = `
@@ -373,12 +386,13 @@ class YouTubeHandler {
   private injectUI() {
     // Inject the timestamp collection UI component
     const script = document.createElement('script');
+
     script.src = chrome.runtime.getURL('src/content-ui/index.js');
     document.head.appendChild(script);
   }
 
   public destroy() {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.hideFloatingButton();
   }
 }
@@ -391,12 +405,11 @@ window.addEventListener('beforeunload', () => {
   youtubeHandler.destroy();
 });
 
-window.addEventListener('message', event => {
+window.addEventListener('message', (event) => {
   if (event.source !== window) return;
 
   if (event.data?.type === 'YTCLIPPER_UI_SAVE_TIMESTAMP') {
     console.log('[YTClipper] Received timestamp save trigger from UI');
     youtubeHandler.saveQuickTimestamp?.(); // expose method if needed
   }
-}
-);
+});

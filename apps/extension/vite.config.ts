@@ -5,9 +5,9 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 import manifest from './manifest';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
@@ -50,6 +50,7 @@ export default defineConfig(({ mode }) => {
         output: {
           entryFileNames: chunk => {
             const facadeModuleId = chunk.facadeModuleId;
+
             if (facadeModuleId?.includes('background')) {
               return 'src/background/index.js';
             }
@@ -59,17 +60,21 @@ export default defineConfig(({ mode }) => {
             if (facadeModuleId?.includes('content-ui')) {
               return 'src/content-ui/index.js';
             }
+
             return 'src/[name]/index.js';
           },
           chunkFileNames: 'chunks/[name].[hash].js',
           assetFileNames: assetInfo => {
             const name = assetInfo.name || '';
+
             if (name.endsWith('.css')) {
               if (name.includes('content')) {
                 return 'assets/content.css';
               }
+
               return 'assets/[name].[ext]';
             }
+
             return 'assets/[name].[ext]';
           },
         },

@@ -19,6 +19,10 @@ export default [
         chrome: 'readonly',
         browser: true,
       },
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
 ];

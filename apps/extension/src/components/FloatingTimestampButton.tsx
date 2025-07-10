@@ -29,6 +29,7 @@ export const FloatingTimestampButton: React.FC<
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
+
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -108,18 +109,17 @@ export const FloatingTimestampButton: React.FC<
               type='text'
               placeholder='Title (optional)'
               value={form.title}
-              onChange={e =>
-                setForm(prev => ({ ...prev, title: e.target.value }))
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, title: e.target.value }))
               }
               className='ytclipper-form-input'
-              autoFocus
             />
 
             <textarea
               placeholder='Note (optional)'
               value={form.note}
-              onChange={e =>
-                setForm(prev => ({ ...prev, note: e.target.value }))
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, note: e.target.value }))
               }
               className='ytclipper-form-textarea'
               rows={2}

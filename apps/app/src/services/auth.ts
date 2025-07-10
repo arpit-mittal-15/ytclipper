@@ -1,7 +1,8 @@
-import config from '@/config';
 import { useEffect } from 'react';
 
 import { useAuth0 } from '@auth0/auth0-react';
+
+import config from '@/config';
 
 export function useAuthMessageListener() {
   const { isAuthenticated, isLoading, user, getAccessTokenSilently } =

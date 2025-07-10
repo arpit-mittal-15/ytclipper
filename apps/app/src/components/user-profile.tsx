@@ -2,9 +2,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   Button,
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
 } from '@ytclipper/ui';
 
 const UserProfile = () => {
@@ -55,50 +55,52 @@ const UserProfile = () => {
         <CardTitle>User Profile</CardTitle>
       </CardHeader>
       <CardContent className='space-y-4'>
-        {user.picture ? <div className='flex justify-center'>
+        {user.picture ? (
+          <div className='flex justify-center'>
             <img
               src={user.picture}
               alt={user.name || 'User'}
               className='w-20 h-20 rounded-full border-2 border-gray-200'
             />
-          </div> : null}
+          </div>
+        ) : null}
 
         <div className='space-y-3'>
           <div className='border-b pb-2'>
-            <label className='text-sm font-medium text-gray-500'>Name</label>
+            <div className='text-sm font-medium text-gray-500'>Name</div>
             <p className='text-base'>{user.name || 'Not provided'}</p>
           </div>
 
           <div className='border-b pb-2'>
-            <label className='text-sm font-medium text-gray-500'>Email</label>
+            <div className='text-sm font-medium text-gray-500'>Email</div>
             <div className='flex items-center space-x-2'>
               <p className='text-base'>{user.email || 'Not provided'}</p>
-              {user.email_verified ? <span className='px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full'>
+              {user.email_verified ? (
+                <span className='px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full'>
                   ✓ Verified
-                </span> : null}
+                </span>
+              ) : null}
             </div>
           </div>
 
           <div className='border-b pb-2'>
-            <label className='text-sm font-medium text-gray-500'>
-              Username
-            </label>
+            <div className='text-sm font-medium text-gray-500'>Username</div>
             <p className='text-base'>
               {user.nickname || user.preferred_username || 'Not provided'}
             </p>
           </div>
 
           <div className='border-b pb-2'>
-            <label className='text-sm font-medium text-gray-500'>User ID</label>
+            <div className='text-sm font-medium text-gray-500'>User ID</div>
             <p className='text-xs font-mono bg-gray-100 p-2 rounded break-all'>
               {user.sub}
             </p>
           </div>
 
           <div className='border-b pb-2'>
-            <label className='text-sm font-medium text-gray-500'>
+            <div className='text-sm font-medium text-gray-500'>
               Last Updated
-            </label>
+            </div>
             <p className='text-sm'>
               {user.updated_at
                 ? new Date(user.updated_at).toLocaleDateString()

@@ -22,6 +22,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = () => {
       url: 'https://app.ytclipper.com',
     });
   };
+
   return (
     <div className='login-container'>
       <div className='login-header'>

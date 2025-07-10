@@ -22,7 +22,9 @@ class AuthService {
       createdAt: new Date().toISOString(),
     };
     const fakeToken = `fake-token-${Math.random().toString(36).slice(2)}`;
+
     await this.storeAuthData(fakeToken, fakeUser);
+
     return {
       success: true,
       user: fakeUser,
@@ -42,7 +44,9 @@ class AuthService {
       createdAt: new Date().toISOString(),
     };
     const fakeToken = `fake-token-${Math.random().toString(36).slice(2)}`;
+
     await this.storeAuthData(fakeToken, fakeUser);
+
     return {
       success: true,
       user: fakeUser,
@@ -56,18 +60,19 @@ class AuthService {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 200));
     const { user } = await this.getStoredAuthData();
+
     if (user) {
       return {
         success: true,
         user,
         token,
       };
-    } else {
-      return {
-        success: false,
-        error: 'No user found',
-      };
     }
+
+    return {
+      success: false,
+      error: 'No user found',
+    };
   }
 
   // Store authentication data in Chrome storage
@@ -97,16 +102,20 @@ class AuthService {
       ]);
       // Check if token is too old (7 days)
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
       if (result.loginTimestamp && result.loginTimestamp < sevenDaysAgo) {
         await this.clearAuthData();
+
         return { token: null, user: null };
       }
+
       return {
         token: result.authToken || null,
         user: result.currentUser || null,
       };
     } catch (error) {
       logger.error('Failed to get stored auth data:', error);
+
       return { token: null, user: null };
     }
   }

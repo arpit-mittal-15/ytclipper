@@ -27,5 +27,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "eslint.config.js", "tailwind.config.ts", "vitest.config.ts"]
 }

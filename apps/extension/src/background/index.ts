@@ -14,7 +14,7 @@ interface Timestamp {
 }
 
 // Handle extension installation
-chrome.runtime.onInstalled.addListener(details => {
+chrome.runtime.onInstalled.addListener((details) => {
   logger.info('Extension installed:', details.reason);
 
   if (details.reason === 'install') {
@@ -35,33 +35,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'SAVE_TIMESTAMP':
       handleSaveTimestamp(message.data)
         .then(sendResponse)
-        .catch(error => {
+        .catch((error) => {
           logger.error('Failed to save timestamp:', error);
           sendResponse({ success: false, error: error.message });
+
+          return undefined;
         });
+
       return true; // Keep the message channel open for async response
 
     case 'GET_TIMESTAMPS':
       handleGetTimestamps(message.data)
         .then(sendResponse)
-        .catch(error => {
+        .catch((error) => {
           logger.error('Failed to get timestamps:', error);
           sendResponse({ success: false, error: error.message });
+
+          return undefined;
         });
+
       return true;
 
     case 'SYNC_DATA':
       handleSyncData()
         .then(sendResponse)
-        .catch(error => {
+        .catch((error) => {
           logger.error('Failed to sync data:', error);
           sendResponse({ success: false, error: error.message });
+
+          return undefined;
         });
+
       return true;
 
     default:
       logger.warn('Unknown message type:', message.type);
       sendResponse({ success: false, error: 'Unknown message type' });
+
+      return true;
   }
 });
 
@@ -76,19 +87,17 @@ async function handleSaveTimestamp(data: {
   try {
     // Get current timestamps from storage
     const result = await chrome.storage.local.get(['timestamps']);
-    const timestamps = result.timestamps || {};
+    const timestamps = result.timestamps ?? {};
 
     // Add new timestamp
-    if (!timestamps[data.videoId]) {
-      timestamps[data.videoId] = [];
-    }
+    timestamps[data.videoId] ??= [];
 
     const newTimestamp = {
       id: Date.now().toString(),
       timestamp: data.timestamp,
       title: data.title,
-      note: data.note || '',
-      tags: data.tags || [],
+      note: data.note ?? '',
+      tags: data.tags ?? [],
       createdAt: new Date().toISOString(),
     };
 
@@ -114,10 +123,11 @@ async function handleSaveTimestamp(data: {
 async function handleGetTimestamps(data: { videoId: string }) {
   try {
     const result = await chrome.storage.local.get(['timestamps']);
-    const timestamps = result.timestamps || {};
+    const timestamps = result.timestamps ?? {};
+
     return {
       success: true,
-      timestamps: timestamps[data.videoId] || [],
+      timestamps: timestamps[data.videoId] ?? [],
     };
   } catch (error) {
     throw new Error(`Failed to get timestamps: ${error}`);

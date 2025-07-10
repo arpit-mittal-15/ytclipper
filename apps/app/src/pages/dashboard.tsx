@@ -1,15 +1,15 @@
 import {
   Button,
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
 } from '@ytclipper/ui';
 
 import LogoutButton from '../components/logout-button';
 import UserProfile from '../components/user-profile';
 
-export default function DashboardPage() {
+const DashboardPage = () => {
   return (
     <div className='p-8 space-y-6 max-w-6xl mx-auto'>
       <div className='flex justify-between items-center'>
@@ -49,4 +49,6 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
+};
+
+export default DashboardPage;

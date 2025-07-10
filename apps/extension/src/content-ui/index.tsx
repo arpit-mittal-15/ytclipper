@@ -2,7 +2,10 @@ console.log('[YTClipper UI] content-ui script loaded');
 
 function waitForPlayerContainer(callback: (container: HTMLElement) => void) {
   const interval = setInterval(() => {
-    const playerContainer = document.querySelector('.html5-video-player') as HTMLElement;
+    const playerContainer = document.querySelector(
+      '.html5-video-player',
+    ) as HTMLElement;
+
     if (playerContainer) {
       clearInterval(interval);
       callback(playerContainer);
@@ -12,6 +15,7 @@ function waitForPlayerContainer(callback: (container: HTMLElement) => void) {
 
 function createOverlayButton() {
   const button = document.createElement('button');
+
   button.innerText = '⏱️ Clip';
   button.title = 'Save timestamp';
   button.id = 'ytclipper-overlay-button';
@@ -45,6 +49,7 @@ function injectOverlayButton(playerContainer: HTMLElement) {
   if (document.getElementById('ytclipper-overlay-button')) return;
 
   const button = createOverlayButton();
+
   playerContainer.appendChild(button);
   console.log('[YTClipper UI] Button injected');
 }

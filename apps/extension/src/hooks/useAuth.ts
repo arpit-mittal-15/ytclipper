@@ -25,7 +25,7 @@ export const useAuth = () => {
 
   const initializeAuth = async () => {
     try {
-      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+      setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       const { token, user } = await authService.getStoredAuthData();
 
@@ -33,11 +33,11 @@ export const useAuth = () => {
         // Verify token is still valid
         const verification = await authService.verifyToken(token);
 
-        if (verification.success) {
+        if (verification.success && verification.user && verification.token) {
           setAuthState({
             isAuthenticated: true,
-            user: verification.user!,
-            token: verification.token!,
+            user: verification.user,
+            token: verification.token,
             isLoading: false,
             error: null,
           });
@@ -47,7 +47,7 @@ export const useAuth = () => {
             user: null,
             token: null,
             isLoading: false,
-            error: verification.error || null,
+            error: verification.error ?? null,
           });
         }
       } else {
@@ -72,23 +72,23 @@ export const useAuth = () => {
   };
 
   const login = async (credentials: LoginCredentials) => {
-    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     const result = await authService.login(credentials);
 
-    if (result.success) {
+    if (result.success && result.user && result.token) {
       setAuthState({
         isAuthenticated: true,
-        user: result.user!,
-        token: result.token!,
+        user: result.user,
+        token: result.token,
         isLoading: false,
         error: null,
       });
     } else {
-      setAuthState(prev => ({
+      setAuthState((prev) => ({
         ...prev,
         isLoading: false,
-        error: result.error || 'Login failed',
+        error: result.error ?? 'Login failed',
       }));
     }
 
@@ -96,23 +96,23 @@ export const useAuth = () => {
   };
 
   const register = async (credentials: RegisterCredentials) => {
-    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     const result = await authService.register(credentials);
 
-    if (result.success) {
+    if (result.success && result.user && result.token) {
       setAuthState({
         isAuthenticated: true,
-        user: result.user!,
-        token: result.token!,
+        user: result.user,
+        token: result.token,
         isLoading: false,
         error: null,
       });
     } else {
-      setAuthState(prev => ({
+      setAuthState((prev) => ({
         ...prev,
         isLoading: false,
-        error: result.error || 'Registration failed',
+        error: result.error ?? 'Registration failed',
       }));
     }
 
@@ -120,7 +120,7 @@ export const useAuth = () => {
   };
 
   const logout = async () => {
-    setAuthState(prev => ({ ...prev, isLoading: true }));
+    setAuthState((prev) => ({ ...prev, isLoading: true }));
 
     await authService.logout();
 
@@ -134,7 +134,7 @@ export const useAuth = () => {
   };
 
   const clearError = () => {
-    setAuthState(prev => ({ ...prev, error: null }));
+    setAuthState((prev) => ({ ...prev, error: null }));
   };
 
   return {

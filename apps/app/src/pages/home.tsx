@@ -2,15 +2,15 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   Button,
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
 } from '@ytclipper/ui';
 import { Link } from 'react-router';
 
 import LoginButton from '../components/login-button';
 
-export default function HomePage() {
+const HomePage = () => {
   const { isAuthenticated } = useAuth0();
 
   return (
@@ -57,4 +57,6 @@ export default function HomePage() {
       </Card>
     </div>
   );
-}
+};
+
+export default HomePage;

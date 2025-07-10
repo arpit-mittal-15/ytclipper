@@ -40,12 +40,13 @@ export const Popup: React.FC = () => {
       });
       const tab = tabs[0];
 
-      if (tab && tab.url?.includes('youtube.com/watch')) {
+      if (tab?.url?.includes('youtube.com/watch')) {
         const videoId = extractVideoId(tab.url);
+
         setCurrentTab({
-          id: tab.id!,
+          id: tab.id ?? 0,
           url: tab.url,
-          title: tab.title || 'YouTube Video',
+          title: tab.title ?? 'YouTube Video',
           videoId,
         });
 
@@ -67,6 +68,7 @@ export const Popup: React.FC = () => {
 
   const extractVideoId = (url: string): string | undefined => {
     const match = url.match(/[?&]v=([^&]+)/);
+
     return match ? match[1] : undefined;
   };
 
@@ -86,13 +88,13 @@ export const Popup: React.FC = () => {
   };
 
   const getCurrentTime = async (): Promise<number> => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       if (currentTab?.id) {
         chrome.tabs.sendMessage(
           currentTab.id,
           { type: 'GET_CURRENT_TIME' },
-          response => {
-            resolve(response?.currentTime || 0);
+          (response) => {
+            resolve(response?.currentTime ?? 0);
           },
         );
       } else {
@@ -117,13 +119,13 @@ export const Popup: React.FC = () => {
           note: newTimestamp.note,
           tags: newTimestamp.tags
             .split(',')
-            .map(tag => tag.trim())
+            .map((tag) => tag.trim())
             .filter(Boolean),
         },
       });
 
       if (response.success) {
-        setTimestamps(prev => [...prev, response.timestamp]);
+        setTimestamps((prev) => [...prev, response.timestamp]);
         setNewTimestamp({ title: '', note: '', tags: '' });
         setShowAddForm(false);
       }
@@ -149,18 +151,25 @@ export const Popup: React.FC = () => {
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
+
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Helper handlers for proper naming convention
+  const handleLogin = auth.login;
+  const handleRegister = auth.register;
+  const handleClearError = auth.clearError;
+  const handleLogout = auth.logout;
 
   // Show login screen if not authenticated
   if (!auth.isAuthenticated) {
     return (
       <LoginScreen
-        onLogin={auth.login}
-        onRegister={auth.register}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
         isLoading={auth.isLoading}
         error={auth.error}
-        onClearError={auth.clearError}
+        onClearError={handleClearError}
       />
     );
   }
@@ -173,7 +182,7 @@ export const Popup: React.FC = () => {
     );
   }
 
-  if (!currentTab || !currentTab.videoId) {
+  if (!currentTab?.videoId) {
     return (
       <div className='popup-container'>
         <div className='header'>
@@ -212,7 +221,7 @@ export const Popup: React.FC = () => {
           </button>
           <button
             className='icon-button'
-            onClick={auth.logout}
+            onClick={handleLogout}
             title={`Logout (${auth.user?.email})`}
           >
             <span>log-out</span>
@@ -225,29 +234,29 @@ export const Popup: React.FC = () => {
         <p>{timestamps.length} timestamps collected</p>
       </div>
 
-      {showAddForm && (
+      {showAddForm ? (
         <div className='add-form'>
           <input
             type='text'
             placeholder='Timestamp title (optional)'
             value={newTimestamp.title}
-            onChange={e =>
-              setNewTimestamp(prev => ({ ...prev, title: e.target.value }))
+            onChange={(e) =>
+              setNewTimestamp((prev) => ({ ...prev, title: e.target.value }))
             }
           />
           <textarea
             placeholder='Notes (optional)'
             value={newTimestamp.note}
-            onChange={e =>
-              setNewTimestamp(prev => ({ ...prev, note: e.target.value }))
+            onChange={(e) =>
+              setNewTimestamp((prev) => ({ ...prev, note: e.target.value }))
             }
           />
           <input
             type='text'
             placeholder='Tags (comma-separated)'
             value={newTimestamp.tags}
-            onChange={e =>
-              setNewTimestamp(prev => ({ ...prev, tags: e.target.value }))
+            onChange={(e) =>
+              setNewTimestamp((prev) => ({ ...prev, tags: e.target.value }))
             }
           />
           <div className='form-actions'>
@@ -262,7 +271,7 @@ export const Popup: React.FC = () => {
             </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className='timestamps-list'>
         {timestamps.length === 0 ? (
@@ -270,22 +279,23 @@ export const Popup: React.FC = () => {
             <p>No timestamps yet. Click + to add your first timestamp!</p>
           </div>
         ) : (
-          timestamps.map(timestamp => (
+          timestamps.map((timestamp) => (
             <div key={timestamp.id} className='timestamp-item'>
-              <div
+              <button
                 className='timestamp-time'
                 onClick={() => jumpToTimestamp(timestamp.timestamp)}
+                type='button'
               >
                 {formatTime(timestamp.timestamp)}
-              </div>
+              </button>
               <div className='timestamp-content'>
                 <div className='timestamp-title'>{timestamp.title}</div>
-                {timestamp.note && (
+                {timestamp.note ? (
                   <div className='timestamp-note'>{timestamp.note}</div>
-                )}
+                ) : null}
                 {timestamp.tags.length > 0 && (
                   <div className='timestamp-tags'>
-                    {timestamp.tags.map(tag => (
+                    {timestamp.tags.map((tag) => (
                       <span key={tag} className='tag'>
                         {tag}
                       </span>
