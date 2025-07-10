@@ -27,38 +27,16 @@ export const useAuth = () => {
     try {
       setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      const { token, user } = await authService.getStoredAuthData();
+      // Use the new getCurrentAuth method that checks web app, storage, and backend
+      const authResult = await authService.getCurrentAuth();
 
-      if (token && user) {
-        // Verify token is still valid
-        const verification = await authService.verifyToken(token);
-
-        if (verification.success && verification.user && verification.token) {
-          setAuthState({
-            isAuthenticated: true,
-            user: verification.user,
-            token: verification.token,
-            isLoading: false,
-            error: null,
-          });
-        } else {
-          setAuthState({
-            isAuthenticated: false,
-            user: null,
-            token: null,
-            isLoading: false,
-            error: verification.error ?? null,
-          });
-        }
-      } else {
-        setAuthState({
-          isAuthenticated: false,
-          user: null,
-          token: null,
-          isLoading: false,
-          error: null,
-        });
-      }
+      setAuthState({
+        isAuthenticated: authResult.isAuthenticated,
+        user: authResult.user,
+        token: authResult.token,
+        isLoading: false,
+        error: null,
+      });
     } catch (error) {
       logger.error('Failed to initialize auth:', error);
       setAuthState({
@@ -76,14 +54,14 @@ export const useAuth = () => {
 
     const result = await authService.login(credentials);
 
-    if (result.success && result.user && result.token) {
-      setAuthState({
-        isAuthenticated: true,
-        user: result.user,
-        token: result.token,
+    if (result.success) {
+      // Login redirects to web app, so we don't get immediate results
+      // The auth state will be updated when the web app communicates back
+      setAuthState((prev) => ({
+        ...prev,
         isLoading: false,
         error: null,
-      });
+      }));
     } else {
       setAuthState((prev) => ({
         ...prev,
@@ -100,14 +78,14 @@ export const useAuth = () => {
 
     const result = await authService.register(credentials);
 
-    if (result.success && result.user && result.token) {
-      setAuthState({
-        isAuthenticated: true,
-        user: result.user,
-        token: result.token,
+    if (result.success) {
+      // Registration redirects to web app, so we don't get immediate results
+      // The auth state will be updated when the web app communicates back
+      setAuthState((prev) => ({
+        ...prev,
         isLoading: false,
         error: null,
-      });
+      }));
     } else {
       setAuthState((prev) => ({
         ...prev,
@@ -136,6 +114,21 @@ export const useAuth = () => {
   const clearError = () => {
     setAuthState((prev) => ({ ...prev, error: null }));
   };
+
+  // Listen for auth changes from web app
+  useEffect(() => {
+    const handleStorageChange = () => {
+      // Refresh auth state when storage changes (e.g., from web app)
+      initializeAuth();
+    };
+
+    // Listen for storage changes
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
 
   return {
     ...authState,

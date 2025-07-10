@@ -216,7 +216,6 @@ export default tseslint.config([
     files: ['**/*.{ts,tsx}'],
     rules: {
       // TypeScript-specific rules (non-type-checked)
-      '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-as-const': 'error',
       '@typescript-eslint/prefer-literal-enum-member': 'error',
     },

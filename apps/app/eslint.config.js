@@ -10,4 +10,12 @@ export default [
       },
     },
   },
+  {
+    files: ['eslint.config.js'],
+    languageOptions: {
+      parserOptions: {
+        project: false,
+      },
+    },
+  },
 ];

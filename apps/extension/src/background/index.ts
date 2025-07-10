@@ -1,17 +1,9 @@
 import { logger } from '@ytclipper/extension-dev-utils';
 
+import { authService } from '../services/authService';
+
 // Background service worker for YTClipper Chrome Extension
 logger.info('Background service worker started');
-
-// TypeScript interfaces
-interface Timestamp {
-  id: string;
-  timestamp: number;
-  title: string;
-  note: string;
-  tags: string[];
-  createdAt: string;
-}
 
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
@@ -76,7 +68,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Save timestamp to local storage and sync with backend
+// Save timestamp to backend and local storage as fallback
 async function handleSaveTimestamp(data: {
   videoId: string;
   timestamp: number;
@@ -85,49 +77,149 @@ async function handleSaveTimestamp(data: {
   tags?: string[];
 }) {
   try {
-    // Get current timestamps from storage
-    const result = await chrome.storage.local.get(['timestamps']);
-    const timestamps = result.timestamps ?? {};
+    // Get current authentication
+    const auth = await authService.getCurrentAuth();
 
-    // Add new timestamp
-    timestamps[data.videoId] ??= [];
-
-    const newTimestamp = {
-      id: Date.now().toString(),
-      timestamp: data.timestamp,
-      title: data.title,
-      note: data.note ?? '',
-      tags: data.tags ?? [],
-      createdAt: new Date().toISOString(),
-    };
-
-    timestamps[data.videoId].push(newTimestamp);
-
-    // Save to local storage
-    await chrome.storage.local.set({ timestamps });
-
-    // Sync with backend if API is available
-    try {
-      await syncWithBackend(data.videoId, newTimestamp);
-    } catch (error) {
-      logger.warn('Backend sync failed, saved locally:', error);
+    if (!auth.isAuthenticated || !auth.token) {
+      // Save locally if not authenticated
+      return await saveTimestampLocally(data);
     }
 
-    return { success: true, timestamp: newTimestamp };
+    // Try to save to backend first
+    try {
+      const settings = await chrome.storage.sync.get(['apiEndpoint']);
+      const apiEndpoint =
+        settings.apiEndpoint || 'http://localhost:8080/api/v1';
+
+      const response = await fetch(`${apiEndpoint}/timestamps`, {
+        method: 'POST',
+        headers: authService.getAuthHeader(auth.token),
+        body: JSON.stringify({
+          video_id: data.videoId,
+          timestamp: data.timestamp,
+          title: data.title,
+          note: data.note || '',
+          tags: data.tags || [],
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired, clear auth data and fall back to local storage
+          await authService.clearAuthData();
+          throw new Error('Authentication expired');
+        }
+        throw new Error(`Backend save failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data?.timestamp) {
+        // Also save locally as backup
+        await saveTimestampLocally(data);
+
+        return {
+          success: true,
+          timestamp: result.data.timestamp,
+          source: 'backend',
+        };
+      }
+      throw new Error('Invalid response from backend');
+    } catch (backendError) {
+      logger.warn('Backend save failed, saving locally:', backendError);
+
+      // Fall back to local storage
+      return await saveTimestampLocally(data);
+    }
   } catch (error) {
     throw new Error(`Failed to save timestamp: ${error}`);
   }
 }
 
-// Get timestamps for a video
+// Save timestamp to local storage (fallback)
+async function saveTimestampLocally(data: {
+  videoId: string;
+  timestamp: number;
+  title: string;
+  note?: string;
+  tags?: string[];
+}) {
+  // Get current timestamps from storage
+  const result = await chrome.storage.local.get(['timestamps']);
+  const timestamps = result.timestamps ?? {};
+
+  // Add new timestamp
+  timestamps[data.videoId] ??= [];
+
+  const newTimestamp = {
+    id: Date.now().toString(),
+    timestamp: data.timestamp,
+    title: data.title,
+    note: data.note ?? '',
+    tags: data.tags ?? [],
+    createdAt: new Date().toISOString(),
+  };
+
+  timestamps[data.videoId].push(newTimestamp);
+
+  // Save to local storage
+  await chrome.storage.local.set({ timestamps });
+
+  return {
+    success: true,
+    timestamp: newTimestamp,
+    source: 'local',
+  };
+}
+
+// Get timestamps for a video (try backend first, then local)
 async function handleGetTimestamps(data: { videoId: string }) {
   try {
+    // Get current authentication
+    const auth = await authService.getCurrentAuth();
+
+    if (auth.isAuthenticated && auth.token) {
+      // Try to get from backend first
+      try {
+        const settings = await chrome.storage.sync.get(['apiEndpoint']);
+        const apiEndpoint =
+          settings.apiEndpoint || 'http://localhost:8080/api/v1';
+
+        const response = await fetch(
+          `${apiEndpoint}/timestamps/${data.videoId}`,
+          {
+            method: 'GET',
+            headers: authService.getAuthHeader(auth.token),
+          },
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+
+          if (result.success && result.data?.timestamps) {
+            return {
+              success: true,
+              timestamps: result.data.timestamps,
+              source: 'backend',
+            };
+          }
+        } else if (response.status === 401) {
+          // Token expired, clear auth data
+          await authService.clearAuthData();
+        }
+      } catch (backendError) {
+        logger.warn('Backend fetch failed, using local data:', backendError);
+      }
+    }
+
+    // Fall back to local storage
     const result = await chrome.storage.local.get(['timestamps']);
     const timestamps = result.timestamps ?? {};
 
     return {
       success: true,
       timestamps: timestamps[data.videoId] ?? [],
+      source: 'local',
     };
   } catch (error) {
     throw new Error(`Failed to get timestamps: ${error}`);
@@ -137,6 +229,15 @@ async function handleGetTimestamps(data: { videoId: string }) {
 // Sync local data with backend
 async function handleSyncData() {
   try {
+    const auth = await authService.getCurrentAuth();
+
+    if (!auth.isAuthenticated || !auth.token) {
+      return {
+        success: false,
+        message: 'Not authenticated - cannot sync with backend',
+      };
+    }
+
     const settings = await chrome.storage.sync.get(['apiEndpoint']);
     const localData = await chrome.storage.local.get(['timestamps']);
 
@@ -144,52 +245,15 @@ async function handleSyncData() {
       return { success: true, message: 'Nothing to sync' };
     }
 
-    // Here you would implement the actual backend sync logic
+    // In a real implementation, you'd sync local timestamps with backend
     logger.info('Syncing data with backend...', settings.apiEndpoint);
 
-    return { success: true, message: 'Data synced successfully' };
+    return {
+      success: true,
+      message: 'Data sync completed',
+      user: auth.user?.email || 'Unknown',
+    };
   } catch (error) {
     throw new Error(`Failed to sync data: ${error}`);
   }
-}
-
-// Sync single timestamp with backend
-async function syncWithBackend(videoId: string, timestamp: Timestamp) {
-  const settings = await chrome.storage.sync.get(['apiEndpoint']);
-  const authData = await chrome.storage.local.get(['authToken']);
-
-  if (!settings.apiEndpoint) {
-    throw new Error('API endpoint not configured');
-  }
-
-  if (!authData.authToken) {
-    throw new Error('User not authenticated');
-  }
-
-  const response = await fetch(`${settings.apiEndpoint}/timestamps`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${authData.authToken}`,
-    },
-    body: JSON.stringify({
-      videoId,
-      ...timestamp,
-    }),
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      // Token expired, clear auth data
-      await chrome.storage.local.remove([
-        'authToken',
-        'currentUser',
-        'loginTimestamp',
-      ]);
-      throw new Error('Authentication expired. Please login again.');
-    }
-    throw new Error(`Backend sync failed: ${response.statusText}`);
-  }
-
-  return response.json();
 }

@@ -87,40 +87,31 @@ func SetupRouter(db *database.Database, cfg *config.Config) *gin.Engine {
 		v1.GET("/health", handlers.HealthCheck)
 		v1.GET("/db-health", handlers.DBHealthCheck(db))
 
-		// Auth routes (to be implemented)
+		// Auth routes
 		authRoutes := v1.Group("/auth")
 		{
 			authRoutes.GET("/user", auth0Service.GetUserInfo())
 			authRoutes.GET("/logout", auth0Service.LogoutHandler())
+
+			// Extension authentication endpoints
+			authRoutes.POST("/verify", auth.RequireAuth(&cfg.Auth0), handlers.VerifyToken)
+			authRoutes.GET("/profile", auth.RequireAuth(&cfg.Auth0), handlers.GetUserProfile)
 		}
 
-		// Protected routes (to be implemented)
+		// Protected routes
 		protected := v1.Group("")
 		protected.Use(auth.RequireAuth(&cfg.Auth0))
 		{
-			protected.GET("/profile", func(c *gin.Context) {
-				// Get user ID from context
-				userID, exists := auth.GetUserID(c)
-				if !exists {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found"})
-					return
-				}
+			// User profile endpoint
+			protected.GET("/profile", handlers.GetUserProfile)
 
-				// Get full claims if needed
-				claims, exists := auth.GetClaims(c)
-				if !exists {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Claims not found"})
-					return
-				}
-
-				c.JSON(http.StatusOK, gin.H{
-					"message":    "This is a protected route",
-					"user_id":    userID,
-					"email":      claims.RegisteredClaims.Subject,
-					"issued_at":  claims.RegisteredClaims.IssuedAt,
-					"expires_at": claims.RegisteredClaims.Expiry,
-				})
-			})
+			// Timestamp endpoints
+			timestampRoutes := protected.Group("/timestamps")
+			{
+				timestampRoutes.POST("", handlers.CreateTimestamp)
+				timestampRoutes.GET("/:videoId", handlers.GetTimestamps)
+				timestampRoutes.DELETE("/:id", handlers.DeleteTimestamp)
+			}
 		}
 	}
 

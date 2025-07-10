@@ -1,9 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+import { Button } from '@ytclipper/ui';
 
 import { LoginScreen } from '../components/LoginScreen';
 import { useAuth } from '../hooks/useAuth';
 
-interface Timestamp {
+interface TabInfo {
+  id: number;
+  url: string;
+  title: string;
+  videoId: string | null;
+}
+
+interface StoredTimestamp {
   id: string;
   timestamp: number;
   title: string;
@@ -12,35 +21,48 @@ interface Timestamp {
   createdAt: string;
 }
 
-interface YouTubeTab {
-  id: number;
-  url: string;
-  title: string;
-  videoId?: string;
-}
+const extractVideoId = (url: string): string | null => {
+  const match = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  );
 
-export const Popup: React.FC = () => {
-  const auth = useAuth();
-  const [currentTab, setCurrentTab] = useState<YouTubeTab | null>(null);
-  const [timestamps, setTimestamps] = useState<Timestamp[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [newTimestamp, setNewTimestamp] = useState({
-    title: '',
-    note: '',
-    tags: '',
-  });
-  const [showAddForm, setShowAddForm] = useState(false);
+  return match ? match[1] : null;
+};
 
-  const initializePopup = useCallback(async () => {
-    try {
-      // Get current active tab
-      const tabs = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
+const formatTime = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
+const Popup: React.FC = () => {
+  const {
+    isAuthenticated,
+    user,
+    token,
+    isLoading,
+    error,
+    login,
+    logout,
+    clearError,
+  } = useAuth();
+  const [currentTab, setCurrentTab] = useState<TabInfo | null>(null);
+  const [timestamps, setTimestamps] = useState<StoredTimestamp[]>([]);
+  const [isLoadingTimestamps, setIsLoadingTimestamps] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Get current tab information
+  useEffect(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
 
-      if (tab?.url?.includes('youtube.com/watch')) {
+      if (tab?.url && tab.url.includes('youtube.com/watch')) {
         const videoId = extractVideoId(tab.url);
 
         setCurrentTab({
@@ -49,30 +71,22 @@ export const Popup: React.FC = () => {
           title: tab.title ?? 'YouTube Video',
           videoId,
         });
-
-        // Load timestamps for this video
-        if (videoId) {
-          await loadTimestamps(videoId);
-        }
+      } else {
+        setCurrentTab(null);
       }
-    } catch (error) {
-      console.error('Failed to initialize popup:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    });
   }, []);
 
+  // Load timestamps when tab changes
   useEffect(() => {
-    initializePopup();
-  }, [initializePopup]);
-
-  const extractVideoId = (url: string): string | undefined => {
-    const match = url.match(/[?&]v=([^&]+)/);
-
-    return match ? match[1] : undefined;
-  };
+    if (currentTab?.videoId) {
+      loadTimestamps(currentTab.videoId);
+    }
+  }, [currentTab?.videoId]);
 
   const loadTimestamps = async (videoId: string) => {
+    setIsLoadingTimestamps(true);
+
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'GET_TIMESTAMPS',
@@ -81,239 +95,161 @@ export const Popup: React.FC = () => {
 
       if (response.success) {
         setTimestamps(response.timestamps);
+      } else {
+        console.error('Failed to load timestamps:', response.error);
       }
     } catch (error) {
-      console.error('Failed to load timestamps:', error);
+      console.error('Error loading timestamps:', error);
+    } finally {
+      setIsLoadingTimestamps(false);
     }
   };
 
-  const getCurrentTime = async (): Promise<number> => {
-    return new Promise((resolve) => {
-      if (currentTab?.id) {
-        chrome.tabs.sendMessage(
-          currentTab.id,
-          { type: 'GET_CURRENT_TIME' },
-          (response) => {
-            resolve(response?.currentTime ?? 0);
-          },
-        );
-      } else {
-        resolve(0);
-      }
-    });
-  };
-
-  const handleAddTimestamp = async () => {
-    if (!currentTab?.videoId) return;
+  const handleSyncData = async () => {
+    setIsSyncing(true);
 
     try {
-      const currentTime = await getCurrentTime();
-
       const response = await chrome.runtime.sendMessage({
-        type: 'SAVE_TIMESTAMP',
-        data: {
-          videoId: currentTab.videoId,
-          timestamp: currentTime,
-          title:
-            newTimestamp.title || `Timestamp at ${formatTime(currentTime)}`,
-          note: newTimestamp.note,
-          tags: newTimestamp.tags
-            .split(',')
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-        },
+        type: 'SYNC_DATA',
       });
 
       if (response.success) {
-        setTimestamps((prev) => [...prev, response.timestamp]);
-        setNewTimestamp({ title: '', note: '', tags: '' });
-        setShowAddForm(false);
+        // Refresh timestamps after sync
+        if (currentTab?.videoId) {
+          await loadTimestamps(currentTab.videoId);
+        }
+
+        // Show success message briefly
+        console.log('Sync completed:', response.message);
+      } else {
+        console.error('Sync failed:', response.error);
       }
     } catch (error) {
-      console.error('Failed to add timestamp:', error);
+      console.error('Error syncing data:', error);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
-  const jumpToTimestamp = async (timestamp: number) => {
-    if (currentTab?.id) {
-      await chrome.tabs.sendMessage(currentTab.id, {
-        type: 'JUMP_TO_TIME',
-        data: { timestamp },
-      });
-    }
-  };
-
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Helper handlers for proper naming convention
-  const handleLogin = auth.login;
-  const handleRegister = auth.register;
-  const handleClearError = auth.clearError;
-  const handleLogout = auth.logout;
-
-  // Show login screen if not authenticated
-  if (!auth.isAuthenticated) {
-    return (
-      <LoginScreen
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-        isLoading={auth.isLoading}
-        error={auth.error}
-        onClearError={handleClearError}
-      />
-    );
-  }
-
-  if (isLoading) {
+  // Not on YouTube
+  if (!currentTab) {
     return (
       <div className='popup-container'>
-        <div className='loading'>Loading...</div>
-      </div>
-    );
-  }
-
-  if (!currentTab?.videoId) {
-    return (
-      <div className='popup-container'>
-        <div className='header'>
-          <div className='logo'>
-            <span>clock</span>
-            <span>YTClipper</span>
-          </div>
+        <div className='popup-header'>
+          <h1>YTClipper</h1>
         </div>
-        <div className='not-youtube'>
+        <div className='popup-content'>
           <p>Navigate to a YouTube video to start collecting timestamps.</p>
         </div>
       </div>
     );
   }
 
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className='popup-container'>
+        <LoginScreen
+          onLogin={login}
+          onRegister={async () => ({ success: true })} // Not used in new flow
+          isLoading={isLoading}
+          error={error}
+          onClearError={clearError}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className='popup-container'>
-      <div className='header'>
-        <div className='logo'>
-          <span>clock</span>
-          <span>YTClipper</span>
-        </div>
-        <div className='header-actions'>
-          <button
-            className='icon-button'
-            onClick={() => setShowAddForm(!showAddForm)}
-            title='Add timestamp'
-          >
-            <span>plus</span>
-          </button>
-          <button className='icon-button' title='Sync with backend'>
-            <span>refresh-cw</span>
-          </button>
-          <button className='icon-button' title='Settings'>
-            <span>settings</span>
-          </button>
-          <button
-            className='icon-button'
-            onClick={handleLogout}
-            title={`Logout (${auth.user?.email})`}
-          >
-            <span>log-out</span>
-          </button>
-        </div>
-      </div>
-
-      <div className='video-info'>
-        <h3>{currentTab.title}</h3>
-        <p>{timestamps.length} timestamps collected</p>
-      </div>
-
-      {showAddForm ? (
-        <div className='add-form'>
-          <input
-            type='text'
-            placeholder='Timestamp title (optional)'
-            value={newTimestamp.title}
-            onChange={(e) =>
-              setNewTimestamp((prev) => ({ ...prev, title: e.target.value }))
-            }
-          />
-          <textarea
-            placeholder='Notes (optional)'
-            value={newTimestamp.note}
-            onChange={(e) =>
-              setNewTimestamp((prev) => ({ ...prev, note: e.target.value }))
-            }
-          />
-          <input
-            type='text'
-            placeholder='Tags (comma-separated)'
-            value={newTimestamp.tags}
-            onChange={(e) =>
-              setNewTimestamp((prev) => ({ ...prev, tags: e.target.value }))
-            }
-          />
-          <div className='form-actions'>
-            <button onClick={handleAddTimestamp} className='btn-primary'>
-              Add Timestamp
-            </button>
-            <button
-              onClick={() => setShowAddForm(false)}
-              className='btn-secondary'
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className='timestamps-list'>
-        {timestamps.length === 0 ? (
-          <div className='empty-state'>
-            <p>No timestamps yet. Click + to add your first timestamp!</p>
-          </div>
-        ) : (
-          timestamps.map((timestamp) => (
-            <div key={timestamp.id} className='timestamp-item'>
-              <button
-                className='timestamp-time'
-                onClick={() => jumpToTimestamp(timestamp.timestamp)}
-                type='button'
+      <div className='popup-header'>
+        <div className='header-content'>
+          <h1>YTClipper</h1>
+          <div className='user-info'>
+            <span className='user-email'>{user?.email}</span>
+            {token ? (
+              <Button
+                onClick={handleSyncData}
+                disabled={isSyncing}
+                size='sm'
+                variant='outline'
+                className='sync-button'
               >
-                {formatTime(timestamp.timestamp)}
-              </button>
-              <div className='timestamp-content'>
-                <div className='timestamp-title'>{timestamp.title}</div>
-                {timestamp.note ? (
-                  <div className='timestamp-note'>{timestamp.note}</div>
-                ) : null}
-                {timestamp.tags.length > 0 && (
-                  <div className='timestamp-tags'>
-                    {timestamp.tags.map((tag) => (
-                      <span key={tag} className='tag'>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
+                {isSyncing ? 'Syncing...' : 'Sync'}
+              </Button>
+            ) : null}
+            <Button onClick={logout} size='sm' variant='destructive'>
+              Logout
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className='footer'>
-        <button className='btn-secondary' title='Export timestamps'>
-          <span>download</span>
-          Export
-        </button>
+      <div className='popup-content'>
+        <div className='video-info'>
+          <h3>{currentTab.title}</h3>
+          <p className='video-id'>Video ID: {currentTab.videoId}</p>
+        </div>
+
+        <div className='timestamps-section'>
+          <div className='section-header'>
+            <h4>Timestamps</h4>
+            <Button
+              onClick={() =>
+                currentTab.videoId && loadTimestamps(currentTab.videoId)
+              }
+              disabled={isLoadingTimestamps}
+              size='sm'
+              variant='outline'
+            >
+              {isLoadingTimestamps ? 'Loading...' : 'Refresh'}
+            </Button>
+          </div>
+          {isLoadingTimestamps ? (
+            <div className='loading'>Loading timestamps...</div>
+          ) : null}
+
+          {!isLoadingTimestamps && timestamps.length > 0 ? (
+            <div className='timestamps-list'>
+              {timestamps.map((timestamp) => (
+                <div key={timestamp.id} className='timestamp-item'>
+                  <div className='timestamp-time'>
+                    {formatTime(timestamp.timestamp)}
+                  </div>
+                  <div className='timestamp-content'>
+                    <div className='timestamp-title'>{timestamp.title}</div>
+                    {timestamp.note ? (
+                      <div className='timestamp-note'>{timestamp.note}</div>
+                    ) : null}
+                    {timestamp.tags.length > 0 && (
+                      <div className='timestamp-tags'>
+                        {timestamp.tags.map((tag) => (
+                          <span key={tag} className='tag'>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {!isLoadingTimestamps && timestamps.length === 0 ? (
+            <div className='no-timestamps'>
+              <p>No timestamps saved for this video yet.</p>
+              <p>Use the floating button on the video to create timestamps.</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className='popup-footer'>
+          <p>Authentication: {token ? '🔒 Secure' : '⚠️ Local only'}</p>
+        </div>
       </div>
     </div>
   );
 };
+
+export default Popup;

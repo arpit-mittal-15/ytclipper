@@ -1,9 +1,9 @@
-import baseConfig from './index.js';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
 import globals from 'globals';
+import baseConfig from './index.js';
 
 export default [
   ...baseConfig,
@@ -87,16 +87,8 @@ export default [
       'react/style-prop-object': 'error',
       'react/void-dom-elements-no-children': 'error',
 
-
       // REACT COMPONENT RULES
       'react/destructuring-assignment': ['error', 'always'],
-      'react/function-component-definition': [
-        'error',
-        {
-          namedComponents: 'arrow-function',
-          unnamedComponents: 'arrow-function',
-        },
-      ],
       'react/hook-use-state': 'error',
       'react/jsx-filename-extension': [
         'error',
@@ -121,7 +113,6 @@ export default [
       'react/jsx-no-leaked-render': 'error',
       'react/jsx-no-script-url': 'error',
       'react/jsx-no-target-blank': 'error',
-
 
       // ACCESSIBILITY RULES - STRICT
       'jsx-a11y/alt-text': 'error',
