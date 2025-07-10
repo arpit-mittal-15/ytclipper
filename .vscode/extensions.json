@@ -1,0 +1,41 @@
+{
+  "recommendations": [
+    // Essential for this project
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    
+    // TypeScript support
+    "ms-vscode.vscode-typescript-next",
+    
+    // React support
+    "ms-vscode.vscode-react-typescript",
+    
+    // Useful for development
+    "ms-vscode.vscode-json",
+    "redhat.vscode-yaml",
+    "ms-vscode.vscode-markdown",
+    "ms-vscode.vscode-markdown-mermaid",
+    
+    // Git support
+    "eamodio.gitlens",
+    
+    // Docker support (since you have Docker files)
+    "ms-azuretools.vscode-docker",
+    
+    // Go support (for backend)
+    "golang.go",
+    
+    // Additional utilities
+    "ms-vscode.vscode-error-lens",
+    "usernamehw.errorlens",
+    "ms-vscode.vscode-path-intellisense",
+    "christian-kohler.npm-intellisense"
+  ],
+  "unwantedRecommendations": [
+    // Extensions that might conflict
+    "ms-vscode.vscode-typescript",
+    "hookyqr.beautify",
+    "esbenp.prettier-vscode-with-tabs"
+  ]
+} 

@@ -69,8 +69,11 @@ node_modules_bak/
 .env
 
 #vs code
+# VS Code - allow shared settings, ignore personal ones
 .vscode/*
-.vscode/.*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
 *.code-workspace
 !monkeytype.code-workspace
 
