@@ -131,21 +131,6 @@ export default tseslint.config([
       'array-callback-return': 'error',
       'no-array-constructor': 'error',
 
-      // WHITESPACE AND NEWLINE RULES - LOGICAL STRUCTURE (FORMATTING HANDLED BY PRETTIER)
-      'padding-line-between-statements': [
-        'error',
-        { blankLine: 'always', prev: '*', next: 'return' },
-        { blankLine: 'always', prev: ['const', 'let', 'var'], next: '*' },
-        {
-          blankLine: 'any',
-          prev: ['const', 'let', 'var'],
-          next: ['const', 'let', 'var'],
-        },
-        { blankLine: 'always', prev: 'directive', next: '*' },
-        { blankLine: 'any', prev: 'directive', next: 'directive' },
-        { blankLine: 'always', prev: ['case', 'default'], next: '*' },
-      ],
-
       // ERROR PREVENTION - KEEP ALL LOGIC RULES
       'no-unreachable': 'error',
       'no-unreachable-loop': 'error',

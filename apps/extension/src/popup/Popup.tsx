@@ -52,6 +52,7 @@ const Popup: React.FC = () => {
     logout,
     clearError,
   } = useAuth();
+
   const [currentTab, setCurrentTab] = useState<TabInfo | null>(null);
   const [timestamps, setTimestamps] = useState<StoredTimestamp[]>([]);
   const [isLoadingTimestamps, setIsLoadingTimestamps] = useState(false);
@@ -150,7 +151,12 @@ const Popup: React.FC = () => {
     return (
       <div className='popup-container'>
         <LoginScreen
-          onLogin={login}
+          onLogin={async () => {
+            await chrome.tabs.create({
+              url: 'http://localhost:5173/login?extension=true',
+            });
+            return { success: true };
+          }}
           onRegister={async () => ({ success: true })} // Not used in new flow
           isLoading={isLoading}
           error={error}

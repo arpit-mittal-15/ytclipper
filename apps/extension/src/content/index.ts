@@ -400,16 +400,36 @@ class YouTubeHandler {
 // Initialize the YouTube handler
 const youtubeHandler = new YouTubeHandler();
 
+const iframe = document.createElement('iframe');
+iframe.src = 'http://localhost:5173/auth-bridge';
+iframe.style.display = 'none';
+document.body.appendChild(iframe);
+
+iframe.onload = () => {
+  console.log('Auth bridge iframe loaded');
+  iframe.contentWindow?.postMessage(
+    {
+      type: 'TESTING',
+    },
+    '*',
+  );
+};
+
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   youtubeHandler.destroy();
 });
 
-window.addEventListener('message', (event) => {
-  if (event.source !== window) return;
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Forward message to the page
+  window.postMessage(message, '*');
+});
 
-  if (event.data?.type === 'YTCLIPPER_UI_SAVE_TIMESTAMP') {
-    console.log('[YTClipper] Received timestamp save trigger from UI');
-    youtubeHandler.saveQuickTimestamp?.(); // expose method if needed
+window.addEventListener('message', (event) => {
+  if (event.data?.type === 'AUTH_STATUS_RESPONSE') {
+    chrome.runtime.sendMessage({
+      type: 'AUTH_STATUS_RESPONSE',
+      data: event.data,
+    });
   }
 });

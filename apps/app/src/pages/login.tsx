@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router';
 
 import LoginButton from '../components/login-button';
 
-const LoginPage = () => {
+export const LoginPage = () => {
   const { isAuthenticated } = useAuth0();
   const location = useLocation();
 
@@ -34,5 +34,3 @@ const LoginPage = () => {
     </div>
   );
 };
-
-export default LoginPage;

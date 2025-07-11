@@ -10,7 +10,7 @@ import { Link } from 'react-router';
 
 import LoginButton from '../components/login-button';
 
-const HomePage = () => {
+export const HomePage = () => {
   const { isAuthenticated } = useAuth0();
 
   return (
@@ -58,5 +58,3 @@ const HomePage = () => {
     </div>
   );
 };
-
-export default HomePage;

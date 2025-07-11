@@ -52,7 +52,6 @@ class AuthService {
           currentTab?.url?.includes('localhost:5173') ||
           currentTab?.url?.includes('app.ytclipper.com')
         ) {
-          // We're on the web app, try to get auth status
           if (currentTab.id) {
             this.requestAuthFromWebApp(currentTab.id, timeout, resolve);
           } else {
@@ -69,7 +68,6 @@ class AuthService {
             { url: [`${this.webAppUrl}/*`, 'https://app.ytclipper.com/*'] },
             (webAppTabs) => {
               if (webAppTabs.length > 0) {
-                // Web app is open, get auth from there
                 if (webAppTabs[0].id) {
                   this.requestAuthFromWebApp(
                     webAppTabs[0].id,
@@ -117,6 +115,7 @@ class AuthService {
       message: any, // eslint-disable-line @typescript-eslint/no-explicit-any
       sender: chrome.runtime.MessageSender,
     ) => {
+      console.log('Received message from web app authService:', message);
       if (sender.tab?.id === tabId && message.type === 'AUTH_STATUS_RESPONSE') {
         clearTimeout(timeout);
         chrome.runtime.onMessage.removeListener(messageListener);
@@ -133,21 +132,15 @@ class AuthService {
 
     chrome.runtime.onMessage.addListener(messageListener);
 
-    // Send message to web app
-    chrome.tabs
-      .sendMessage(tabId, {
-        type: 'CHECK_AUTH_STATUS',
-        timestamp: Date.now(),
-      })
-      .catch(() => {
-        // If we can't send message, execute a script to post a message
-        chrome.scripting.executeScript({
-          target: { tabId },
-          func: () => {
-            window.postMessage({ type: 'CHECK_AUTH_STATUS' }, '*');
-          },
-        });
-      });
+    chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const iframe: HTMLIFrameElement | null = document.querySelector(
+          'iframe[src*="auth-bridge"]',
+        );
+        iframe?.contentWindow?.postMessage({ type: 'CHECK_AUTH_STATUS' }, '*');
+      },
+    });
   }
 
   // Verify token with backend

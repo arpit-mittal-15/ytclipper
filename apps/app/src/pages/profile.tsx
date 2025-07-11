@@ -10,7 +10,7 @@ import { Link } from 'react-router';
 
 import LogoutButton from '../components/logout-button';
 
-const ProfilePage = () => {
+export const ProfilePage = () => {
   const { user } = useAuth0();
 
   return (
@@ -57,5 +57,3 @@ const ProfilePage = () => {
     </div>
   );
 };
-
-export default ProfilePage;

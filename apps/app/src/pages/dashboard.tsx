@@ -9,7 +9,7 @@ import {
 import LogoutButton from '../components/logout-button';
 import UserProfile from '../components/user-profile';
 
-const DashboardPage = () => {
+export const DashboardPage = () => {
   return (
     <div className='p-8 space-y-6 max-w-6xl mx-auto'>
       <div className='flex justify-between items-center'>
@@ -50,5 +50,3 @@ const DashboardPage = () => {
     </div>
   );
 };
-
-export default DashboardPage;

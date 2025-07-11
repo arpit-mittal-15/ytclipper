@@ -33,15 +33,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const handleWebAppSignup = async () => {
-    onClearError();
-
-    // Open web app signup page
-    chrome.tabs.create({
-      url: 'http://localhost:5173/register?extension=true',
-    });
-  };
-
   return (
     <div className='login-container'>
       <div className='login-header'>
@@ -71,15 +62,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             className='auth-button primary'
           >
             {isLoading ? 'Opening...' : 'Sign In'}
-          </Button>
-
-          <Button
-            onClick={handleWebAppSignup}
-            disabled={isLoading}
-            variant='outline'
-            className='auth-button secondary'
-          >
-            Create Account
           </Button>
         </div>
 

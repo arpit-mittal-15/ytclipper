@@ -9,7 +9,13 @@ const manifest: Manifest = {
 
   permissions: ['activeTab', 'storage', 'scripting', 'tabs'],
 
-  host_permissions: ['https://www.youtube.com/*', 'https://youtube.com/*'],
+  host_permissions: [
+    'https://www.youtube.com/*',
+    'https://youtube.com/*',
+    'https://app.ytclipper.com/*',
+    'https://ytclipper.com/*',
+    'http://localhost:5173/*',
+  ],
 
   background: {
     service_worker: 'src/background/index.js',
@@ -18,7 +24,12 @@ const manifest: Manifest = {
 
   content_scripts: [
     {
-      matches: ['https://www.youtube.com/*', 'https://youtube.com/*'],
+      matches: [
+        'https://www.youtube.com/*',
+        'https://youtube.com/*',
+        'http://localhost:5173/*',
+        'https://app.ytclipper.com/*',
+      ],
       js: ['src/content/index.js'],
       css: ['assets/content.css'],
       run_at: 'document_end',

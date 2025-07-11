@@ -9,17 +9,26 @@ export function useAuthMessageListener() {
     useAuth0();
 
   useEffect(() => {
+    const allowedOrigins = [
+      'https://app.ytclipper.com',
+      'https://ytclipper.com',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'chrome-extension://your-extension-id',
+      'moz-extension://your-extension-id',
+      'https://youtube.com',
+    ];
     const handleMessage = async (event: MessageEvent) => {
-      // Accept messages from extension and same origin
       if (
-        event.origin !== window.location.origin &&
+        event.origin &&
+        !allowedOrigins.includes(event.origin) &&
         !event.origin.startsWith('chrome-extension://') &&
         !event.origin.startsWith('moz-extension://')
       ) {
         return;
       }
 
-      if (event.data.type === 'CHECK_AUTH_STATUS') {
+      if (event?.data?.type === 'CHECK_AUTH_STATUS') {
         try {
           let accessToken = null;
 
@@ -47,10 +56,9 @@ export function useAuthMessageListener() {
 
           // Send response back to extension
           if (event.source && 'postMessage' in event.source) {
-            (event.source as Window).postMessage(response, event.origin);
+            (event.source as Window).postMessage(response, '*');
           }
         } catch (error) {
-          console.error('Error handling auth status request:', error);
           const errorResponse = {
             type: 'AUTH_STATUS_RESPONSE',
             isAuthenticated: false,
@@ -85,7 +93,6 @@ export function useAuthMessageListener() {
             (event.source as Window).postMessage(response, event.origin);
           }
         } catch (error) {
-          console.error('Error during logout:', error);
           const errorResponse = {
             type: 'LOGOUT_RESPONSE',
             success: false,
@@ -101,7 +108,6 @@ export function useAuthMessageListener() {
 
       if (event.data.type === 'EXTENSION_AUTH_SUCCESS') {
         // Extension completed authentication, refresh our state
-        console.log('Extension authentication completed successfully');
 
         // Send current auth status to extension
         try {
