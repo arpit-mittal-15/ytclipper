@@ -24,8 +24,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-    networks:
-      - ytclipper-shared
 
   app:
     image: ${FRONTEND_IMAGE:-ghcr.io/priyabratamo/ytclipper/frontend:latest}
@@ -46,10 +44,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    networks:
-      - ytclipper-shared
-
-# Use a single shared network across all deployments
-networks:
-  ytclipper-shared:
-    external: true

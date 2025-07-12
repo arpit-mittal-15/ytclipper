@@ -193,20 +193,6 @@ jobs:
             echo "🔍 Target domain: $DOMAIN"
             echo "🔍 Target port: $PORT"
 
-            # Ensure shared network exists
-            NETWORK_NAME="ytclipper-shared"
-            if ! docker network ls | grep -q "$NETWORK_NAME"; then
-              echo "🆕 Creating shared network: $NETWORK_NAME"
-              docker network create \
-                --driver bridge \
-                --subnet="172.20.0.0/16" \
-                "$NETWORK_NAME"
-              echo "✅ Shared network created"
-            else
-              echo "✅ Shared network already exists"
-            fi
-
-            # Create directory
             mkdir -p "$TARGET_DIR"
 
             # List current containers for debugging
