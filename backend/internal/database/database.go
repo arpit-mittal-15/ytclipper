@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/shubhamku044/ytclipper/internal/config"
+	"github.com/shubhamku044/ytclipper/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -140,8 +141,17 @@ func (w *GormLogWriter) Printf(format string, args ...interface{}) {
 
 // RunMigrations runs auto-migrations for all models
 func (db *Database) RunMigrations() error {
-	// Add your models here when you create them
-	// For now, we'll just log that migrations would run
+	log.Info().Msg("Starting database migrations...")
+	
+	// Get all models
+	modelsToMigrate := models.AllModels()
+	
+	// Run auto-migration for all models
+	if err := db.DB.AutoMigrate(modelsToMigrate...); err != nil {
+		log.Error().Err(err).Msg("Failed to run database migrations")
+		return err
+	}
+	
 	log.Info().Msg("Database migrations completed successfully")
 	return nil
 }

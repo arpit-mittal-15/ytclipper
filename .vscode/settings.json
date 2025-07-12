@@ -95,5 +95,8 @@
     "**/.turbo": true,
     "**/coverage": true,
     "**/pnpm-lock.yaml": true
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
   }
 } 

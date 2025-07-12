@@ -11,6 +11,8 @@ import {
   HomePage,
   LoginPage,
   ProfilePage,
+  VideosPage,
+  VideoDetailPage,
 } from '@/pages';
 
 const App = () => {
@@ -55,6 +57,22 @@ const App = () => {
       <Route path='/' element={<HomePage />} />
       <Route path='/auth-bridge' element={<AuthBridge />} />
       <Route path='/login' element={<LoginPage />} />
+      <Route
+        path='/videos'
+        element={
+          <ProtectedRoute>
+            <VideosPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path='/video/:id'
+        element={
+          <ProtectedRoute>
+            <VideoDetailPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path='/dashboard'
         element={
