@@ -22,10 +22,6 @@ export interface Manifest {
     default_icon?: Record<string, string>;
   };
   icons?: Record<string, string>;
-  web_accessible_resources?: Array<{
-    resources: string[];
-    matches: string[];
-  }>;
 }
 
 export const logger = {

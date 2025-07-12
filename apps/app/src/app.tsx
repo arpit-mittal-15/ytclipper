@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { useAuth0 } from '@auth0/auth0-react';
 import { Route, Routes } from 'react-router';
 
@@ -12,10 +14,37 @@ import {
 } from '@/pages';
 
 const App = () => {
-  const { isLoading } = useAuth0();
+  const { isLoading, isAuthenticated, getAccessTokenSilently, user, logout } =
+    useAuth0();
 
   // Enable communication with extension
   // useAuthMessageListener();
+  useEffect(() => {
+    const syncTokenWithExtension = async () => {
+      if (isAuthenticated) {
+        try {
+          const token = await getAccessTokenSilently();
+          console.log(
+            'Got token from Auth0:',
+            token ? 'Token exists' : 'No token',
+          );
+          const message = {
+            type: 'AUTH0_TOKEN_UPDATE',
+            token,
+            expiry: Date.now() + 60 * 60 * 1000, // 1 hour
+            user,
+          };
+
+          console.log('Sending message to extension:', message);
+          window.postMessage(message, 'http://localhost:5173');
+        } catch (error) {
+          console.error('Failed to get token:', error);
+        }
+      }
+    };
+
+    syncTokenWithExtension();
+  }, [isAuthenticated, getAccessTokenSilently, user]);
 
   if (isLoading) {
     return <Loading />;

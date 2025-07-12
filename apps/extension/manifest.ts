@@ -3,7 +3,7 @@ import type { Manifest } from './packages/dev-utils';
 const manifest: Manifest = {
   manifest_version: 3,
   name: '__MSG_extensionName__',
-  version: '1.0.0',
+  version: '0.0.1',
   description: '__MSG_extensionDescription__',
   default_locale: 'en',
 
@@ -38,7 +38,7 @@ const manifest: Manifest = {
 
   action: {
     default_popup: 'src/popup/index.html',
-    default_title: '__MSG_extensionName__',
+    default_title: 'YTClipper',
     default_icon: {
       16: 'icon-16.png',
       32: 'icon-32.png',
@@ -53,13 +53,6 @@ const manifest: Manifest = {
     48: 'icon-48.png',
     128: 'icon-128.png',
   },
-
-  web_accessible_resources: [
-    {
-      resources: ['src/content-ui/index.js'],
-      matches: ['https://www.youtube.com/*', 'https://youtube.com/*'],
-    },
-  ],
 };
 
 export default manifest;

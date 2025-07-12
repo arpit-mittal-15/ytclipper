@@ -1,257 +1,149 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import { Button } from '@ytclipper/ui';
-
-import { LoginScreen } from '../components/LoginScreen';
-import { useAuth } from '../hooks/useAuth';
-
-interface TabInfo {
-  id: number;
-  url: string;
-  title: string;
-  videoId: string | null;
+interface UserInfo {
+  name?: string;
+  email?: string;
+  picture?: string;
 }
 
-interface StoredTimestamp {
-  id: string;
-  timestamp: number;
-  title: string;
-  note: string;
-  tags: string[];
-  createdAt: string;
+interface StorageResult {
+  auth0_token?: string;
+  user_info?: UserInfo;
+  token_expiry?: number;
+  clipper_enabled?: boolean;
 }
 
-const extractVideoId = (url: string): string | null => {
-  const match = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-  );
-
-  return match ? match[1] : null;
-};
-
-const formatTime = (seconds: number): string => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
+const MY_DOMAIN = 'http://localhost:5173';
 
 const Popup: React.FC = () => {
-  const {
-    isAuthenticated,
-    user,
-    token,
-    isLoading,
-    error,
-    login,
-    logout,
-    clearError,
-  } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [clipperEnabled, setClipperEnabled] = useState<boolean>(true);
 
-  const [currentTab, setCurrentTab] = useState<TabInfo | null>(null);
-  const [timestamps, setTimestamps] = useState<StoredTimestamp[]>([]);
-  const [isLoadingTimestamps, setIsLoadingTimestamps] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      const result = (await chrome.storage.sync.get([
+        'auth0_token',
+        'user_info',
+        'token_expiry',
+        'clipper_enabled',
+      ])) as StorageResult;
 
-  // Get current tab information
-  useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs[0];
-
-      if (tab?.url && tab.url.includes('youtube.com/watch')) {
-        const videoId = extractVideoId(tab.url);
-
-        setCurrentTab({
-          id: tab.id ?? 0,
-          url: tab.url,
-          title: tab.title ?? 'YouTube Video',
-          videoId,
-        });
-      } else {
-        setCurrentTab(null);
+      if (
+        result.auth0_token &&
+        result.user_info &&
+        isTokenValid(result.token_expiry)
+      ) {
+        setUserInfo(result.user_info);
+      } else if (result.auth0_token && !isTokenValid(result.token_expiry)) {
+        await chrome.storage.sync.remove([
+          'auth0_token',
+          'token_expiry',
+          'user_info',
+        ]);
       }
-    });
+      setClipperEnabled(result.clipper_enabled ?? true);
+    } catch (err) {
+      console.error('Error checking auth status:', err);
+      setError('Failed to check authentication status');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Load timestamps when tab changes
   useEffect(() => {
-    if (currentTab?.videoId) {
-      loadTimestamps(currentTab.videoId);
-    }
-  }, [currentTab?.videoId]);
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
-  const loadTimestamps = async (videoId: string) => {
-    setIsLoadingTimestamps(true);
-
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'GET_TIMESTAMPS',
-        data: { videoId },
-      });
-
-      if (response.success) {
-        setTimestamps(response.timestamps);
-      } else {
-        console.error('Failed to load timestamps:', response.error);
-      }
-    } catch (error) {
-      console.error('Error loading timestamps:', error);
-    } finally {
-      setIsLoadingTimestamps(false);
-    }
+  const isTokenValid = (tokenExpiry?: number): boolean => {
+    return tokenExpiry ? Date.now() < tokenExpiry : false;
   };
 
-  const handleSyncData = async () => {
-    setIsSyncing(true);
+  const toggleClipper = async () => {
+    const newState = !clipperEnabled;
+    setClipperEnabled(newState);
 
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'SYNC_DATA',
+      await chrome.storage.sync.set({
+        clipper_enabled: newState,
+      });
+      const [currentTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
       });
 
-      if (response.success) {
-        // Refresh timestamps after sync
-        if (currentTab?.videoId) {
-          await loadTimestamps(currentTab.videoId);
+      if (currentTab?.id && currentTab.url?.includes('youtube.com')) {
+        try {
+          await chrome.tabs.sendMessage(currentTab.id, {
+            type: 'TOGGLE_CLIPPER',
+            enabled: newState,
+          });
+        } catch (err) {
+          console.error('Error sending message to content script:', err);
         }
-
-        // Show success message briefly
-        console.log('Sync completed:', response.message);
-      } else {
-        console.error('Sync failed:', response.error);
       }
-    } catch (error) {
-      console.error('Error syncing data:', error);
-    } finally {
-      setIsSyncing(false);
+    } catch (err) {
+      console.error('Error toggling clipper:', err);
+      setError('Failed to toggle clipper');
     }
   };
 
-  // Not on YouTube
-  if (!currentTab) {
+  if (loading) {
     return (
       <div className='popup-container'>
-        <div className='popup-header'>
-          <h1>YTClipper</h1>
-        </div>
-        <div className='popup-content'>
-          <p>Navigate to a YouTube video to start collecting timestamps.</p>
+        <div className='loading'>
+          <h3>YT Clipper</h3>
+          <p>Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Show login screen if not authenticated
-  if (!isAuthenticated) {
+  if (error) {
     return (
       <div className='popup-container'>
-        <LoginScreen
-          onLogin={async () => {
-            await chrome.tabs.create({
-              url: 'http://localhost:5173/login?extension=true',
-            });
-            return { success: true };
-          }}
-          onRegister={async () => ({ success: true })} // Not used in new flow
-          isLoading={isLoading}
-          error={error}
-          onClearError={clearError}
-        />
+        <div className='error'>
+          <h3>Error</h3>
+          <p>{error}</p>
+          <button onClick={() => window.close()}>Close</button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className='popup-container'>
-      <div className='popup-header'>
-        <div className='header-content'>
-          <h1>YTClipper</h1>
-          <div className='user-info'>
-            <span className='user-email'>{user?.email}</span>
-            {token ? (
-              <Button
-                onClick={handleSyncData}
-                disabled={isSyncing}
-                size='sm'
-                variant='outline'
-                className='sync-button'
-              >
-                {isSyncing ? 'Syncing...' : 'Sync'}
-              </Button>
-            ) : null}
-            <Button onClick={logout} size='sm' variant='destructive'>
-              Logout
-            </Button>
+      <div className='authenticated'>
+        <div className='user-info'>
+          {userInfo?.picture ? (
+            <img src={userInfo.picture} alt='Profile' className='profile-pic' />
+          ) : null}
+          <div>
+            <h3>Welcome!</h3>
+            <p>{userInfo?.name || userInfo?.email || 'User'}</p>
           </div>
         </div>
-      </div>
-
-      <div className='popup-content'>
-        <div className='video-info'>
-          <h3>{currentTab.title}</h3>
-          <p className='video-id'>Video ID: {currentTab.videoId}</p>
-        </div>
-
-        <div className='timestamps-section'>
-          <div className='section-header'>
-            <h4>Timestamps</h4>
-            <Button
-              onClick={() =>
-                currentTab.videoId && loadTimestamps(currentTab.videoId)
-              }
-              disabled={isLoadingTimestamps}
-              size='sm'
-              variant='outline'
-            >
-              {isLoadingTimestamps ? 'Loading...' : 'Refresh'}
-            </Button>
+        <div className='clipper-toggle'>
+          <label htmlFor='clipper-toggle'>Enable YouTube Clipper</label>
+          <div className='toggle-switch'>
+            <input
+              type='checkbox'
+              id='clipper-toggle'
+              checked={clipperEnabled}
+              onChange={toggleClipper}
+            />
+            <span className='slider' />
           </div>
-          {isLoadingTimestamps ? (
-            <div className='loading'>Loading timestamps...</div>
-          ) : null}
-
-          {!isLoadingTimestamps && timestamps.length > 0 ? (
-            <div className='timestamps-list'>
-              {timestamps.map((timestamp) => (
-                <div key={timestamp.id} className='timestamp-item'>
-                  <div className='timestamp-time'>
-                    {formatTime(timestamp.timestamp)}
-                  </div>
-                  <div className='timestamp-content'>
-                    <div className='timestamp-title'>{timestamp.title}</div>
-                    {timestamp.note ? (
-                      <div className='timestamp-note'>{timestamp.note}</div>
-                    ) : null}
-                    {timestamp.tags.length > 0 && (
-                      <div className='timestamp-tags'>
-                        {timestamp.tags.map((tag) => (
-                          <span key={tag} className='tag'>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {!isLoadingTimestamps && timestamps.length === 0 ? (
-            <div className='no-timestamps'>
-              <p>No timestamps saved for this video yet.</p>
-              <p>Use the floating button on the video to create timestamps.</p>
-            </div>
-          ) : null}
         </div>
 
-        <div className='popup-footer'>
-          <p>Authentication: {token ? '🔒 Secure' : '⚠️ Local only'}</p>
+        <div className='clipper-actions'>
+          <button
+            onClick={() => chrome.tabs.create({ url: MY_DOMAIN })}
+            className='btn-secondary'
+          >
+            Dashboard
+          </button>
         </div>
       </div>
     </div>

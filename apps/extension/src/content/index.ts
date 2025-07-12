@@ -1,6 +1,8 @@
 import './content.css';
-import './style.css';
 
+interface ClipperState {
+  clipper_enabled?: boolean;
+}
 // TypeScript interfaces
 interface Timestamp {
   id: string;
@@ -21,189 +23,197 @@ class YouTubeHandler {
   private player: HTMLVideoElement | null = null;
   private currentVideoId: string | null = null;
   private observers: MutationObserver[] = [];
-  private floatingButton: HTMLDivElement | null = null;
-  private floatingButtonTimeout: number | null = null;
   private isAuthenticated: boolean = true;
+  private clipperEnabled: boolean = true;
+
+  private clipButton: HTMLButtonElement | null = null;
+  private playerContainer: HTMLElement | null = null;
+  private controlBar: HTMLElement | null = null;
 
   constructor() {
     this.init();
+    this.initializeClipperState();
   }
 
   private init() {
-    console.log('YouTube Handler initialized');
     this.checkAuthentication();
     this.waitForPlayer();
     this.observeUrlChanges();
-    this.setupAuthListener();
-    this.injectUI();
   }
 
-  private setupAuthListener() {
-    // Listen for authentication changes
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'local' && (changes.authToken || changes.currentUser)) {
-        this.checkAuthentication().then(() => {
-          if (!this.isAuthenticated) {
-            this.hideFloatingButton();
-          }
-        });
-      }
-    });
+  private initializeClipperState() {
+    try {
+      const result = chrome.storage.sync.get('clipper_enabled') as ClipperState;
+      this.clipperEnabled = result?.clipper_enabled ?? true;
+    } catch (error) {
+      console.error('Failed to initialize clipper state:', error);
+      this.clipperEnabled = true;
+    }
+  }
+
+  handleClipperToggle(enabled: boolean) {
+    this.clipperEnabled = enabled;
+    this.updateClipButtonVisibility();
   }
 
   private async checkAuthentication() {
     try {
-      const result = await chrome.storage.local.get([
-        'authToken',
-        'currentUser',
+      const result = await chrome.storage.sync.get([
+        'auth0_token',
+        'user_info',
       ]);
 
-      this.isAuthenticated = !!(result.authToken && result.currentUser);
+      this.isAuthenticated = !!(result.auth0_token && result.user_info);
+      this.updateClipButtonVisibility();
     } catch (error) {
       console.error('Failed to check authentication:', error);
       this.isAuthenticated = false;
+      this.updateClipButtonVisibility();
     }
   }
 
   private waitForPlayer() {
     const checkPlayer = () => {
       this.player = document.querySelector('video') as HTMLVideoElement;
+      console.log('Checking for YouTube player:', this.player);
       if (this.player) {
-        this.setupPlayerEvents();
         this.detectVideoChange();
+        this.injectClipButton();
       } else {
         setTimeout(checkPlayer, 1000);
       }
     };
 
+    console.log('Waiting for YouTube player...');
     checkPlayer();
   }
 
-  private setupPlayerEvents() {
-    if (!this.player) return;
+  private injectClipButton() {
+    // Find player container
+    this.playerContainer = document.querySelector('.html5-video-player');
+    if (!this.playerContainer) {
+      setTimeout(() => this.injectClipButton(), 500);
+      return;
+    }
 
-    // Add keyboard shortcut for quick timestamp saving (Ctrl+Shift+T)
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
-        e.preventDefault();
+    // Create button if it doesn't exist
+    if (!this.clipButton) {
+      // Find a reference button (settings button)
+      const refButton = document.querySelector(
+        '.ytp-settings-button, .ytp-button',
+      ) as HTMLElement;
+
+      if (!refButton) {
+        setTimeout(() => this.injectClipButton(), 500);
+        return;
+      }
+
+      // Clone the reference button
+      this.clipButton = refButton.cloneNode(true) as HTMLButtonElement;
+      this.clipButton.id = 'yt-clipper-button';
+      this.clipButton.title = 'Save clip at current time';
+      this.clipButton.classList.add('yt-clipper-custom');
+
+      // Remove all children to replace with our icon
+      while (this.clipButton.firstChild) {
+        this.clipButton.removeChild(this.clipButton.firstChild);
+      }
+
+      // Create SVG icon
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '24');
+      svg.setAttribute('height', '24');
+
+      const path = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'path',
+      );
+      path.setAttribute(
+        'd',
+        'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+      );
+      path.setAttribute('stroke', 'white');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-linecap', 'round');
+
+      svg.appendChild(path);
+      this.clipButton.appendChild(svg);
+
+      // Add click handler
+      this.clipButton.addEventListener('click', () => {
         this.saveQuickTimestamp();
-      }
-    });
+      });
 
-    // Show floating button after 10 seconds of video play
-    this.player.addEventListener('play', () => {
-      this.scheduleFloatingButton();
-    });
+      // Insert before the reference button
+      refButton.parentNode?.insertBefore(this.clipButton, refButton);
+    }
 
-    this.player.addEventListener('pause', () => {
-      this.clearFloatingButtonSchedule();
-    });
+    // Apply custom styles
+    this.updateClipButtonStyles();
+    this.updateClipButtonVisibility();
   }
 
-  private scheduleFloatingButton() {
-    if (!this.isAuthenticated) return;
+  private updateClipButtonStyles() {
+    if (!this.clipButton) return;
 
-    this.clearFloatingButtonSchedule();
-    this.floatingButtonTimeout = window.setTimeout(() => {
-      this.showFloatingButton();
-    }, 10000); // Show after 10 seconds
-  }
+    // Apply orange theme while keeping YouTube's button structure
+    this.clipButton.style.cssText = `
+    background-color: #FF6B35 !important;
+    border-radius: 4px !important;
+    margin: 0 4px !important;
+    padding: 5px !important;
+    width: auto !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+  `;
 
-  private clearFloatingButtonSchedule() {
-    if (this.floatingButtonTimeout) {
-      clearTimeout(this.floatingButtonTimeout);
-      this.floatingButtonTimeout = null;
+    // Hover effects
+    this.clipButton.onmouseenter = () => {
+      this.clipButton!.style.backgroundColor = '#E05A2A !important';
+      this.clipButton!.style.transform = 'translateY(-1px)';
+      this.clipButton!.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+    };
+
+    this.clipButton.onmouseleave = () => {
+      this.clipButton!.style.backgroundColor = '#FF6B35 !important';
+      this.clipButton!.style.transform = 'none';
+      this.clipButton!.style.boxShadow = 'none';
+    };
+
+    this.clipButton.onmousedown = () => {
+      this.clipButton!.style.transform = 'translateY(1px)';
+      this.clipButton!.style.boxShadow = 'none';
+    };
+
+    this.clipButton.onmouseup = () => {
+      this.clipButton!.style.transform = 'translateY(-1px)';
+      this.clipButton!.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+    };
+
+    // Adjust icon size
+    const svg = this.clipButton.querySelector('svg');
+    if (svg) {
+      svg.style.width = '20px';
+      svg.style.height = '20px';
     }
   }
 
-  private showFloatingButton() {
-    if (this.floatingButton || !this.isAuthenticated) return;
+  private updateClipButtonVisibility() {
+    if (!this.clipButton) return;
 
-    this.floatingButton = document.createElement('div');
-    this.floatingButton.className = 'ytclipper-floating-container';
-    this.floatingButton.innerHTML = this.createFloatingButtonHTML();
-
-    document.body.appendChild(this.floatingButton);
-
-    // Add event listeners
-    this.setupFloatingButtonEvents();
-  }
-
-  private createFloatingButtonHTML(): string {
-    const currentTime = this.player?.currentTime ?? 0;
-    const formattedTime = this.formatTime(currentTime);
-
-    return `
-      <div class="ytclipper-floating-button">
-        <button class="ytclipper-quick-add" data-action="quick-add" title="Add timestamp at ${formattedTime}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12,6 12,12 16,14"/>
-          </svg>
-          <span>${formattedTime}</span>
-        </button>
-        
-        <button class="ytclipper-detailed-add" data-action="detailed-add" title="Add timestamp with details">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </button>
-        
-        <button class="ytclipper-close" data-action="close" title="Close timestamp tool">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    `;
-  }
-
-  private setupFloatingButtonEvents() {
-    if (!this.floatingButton) return;
-
-    this.floatingButton.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const button = target.closest('button') as HTMLButtonElement;
-      const action = button?.dataset.action;
-
-      switch (action) {
-        case 'quick-add':
-          this.handleQuickAddFromFloat();
-          break;
-
-        case 'detailed-add':
-          this.handleDetailedAddFromFloat();
-          break;
-
-        case 'close':
-          this.hideFloatingButton();
-          break;
-
-        default:
-          // Unknown action, do nothing
-          break;
-      }
-    });
-  }
-
-  private async handleQuickAddFromFloat() {
-    await this.saveQuickTimestamp();
-    this.hideFloatingButton();
-  }
-
-  private handleDetailedAddFromFloat() {
-    // For now, just do quick add. Could expand to show form later
-    this.handleQuickAddFromFloat();
-  }
-
-  private hideFloatingButton() {
-    if (this.floatingButton) {
-      this.floatingButton.remove();
-      this.floatingButton = null;
+    if (this.isAuthenticated && this.clipperEnabled) {
+      this.clipButton.style.display = 'flex';
+      this.clipButton.style.opacity = '1';
+    } else {
+      this.clipButton.style.display = 'none';
+      this.clipButton.style.opacity = '0';
     }
-    this.clearFloatingButtonSchedule();
   }
 
   private observeUrlChanges() {
@@ -213,6 +223,10 @@ class YouTubeHandler {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
         this.detectVideoChange();
+      }
+
+      if (!this.clipButton && document.querySelector('.html5-video-player')) {
+        this.injectClipButton();
       }
     });
 
@@ -230,7 +244,6 @@ class YouTubeHandler {
 
     if (videoId && videoId !== this.currentVideoId) {
       this.currentVideoId = videoId;
-      this.hideFloatingButton(); // Hide floating button when video changes
       this.loadTimestamps();
     }
   }
@@ -383,53 +396,67 @@ class YouTubeHandler {
     }, 3000);
   }
 
-  private injectUI() {
-    // Inject the timestamp collection UI component
-    const script = document.createElement('script');
-
-    script.src = chrome.runtime.getURL('src/content-ui/index.js');
-    document.head.appendChild(script);
-  }
-
   public destroy() {
     this.observers.forEach((observer) => observer.disconnect());
-    this.hideFloatingButton();
+    if (this.clipButton) {
+      this.clipButton.remove();
+      this.clipButton = null;
+    }
   }
 }
 
-// Initialize the YouTube handler
 const youtubeHandler = new YouTubeHandler();
 
-const iframe = document.createElement('iframe');
-iframe.src = 'http://localhost:5173/auth-bridge';
-iframe.style.display = 'none';
-document.body.appendChild(iframe);
-
-iframe.onload = () => {
-  console.log('Auth bridge iframe loaded');
-  iframe.contentWindow?.postMessage(
-    {
-      type: 'TESTING',
-    },
-    '*',
-  );
-};
-
-// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   youtubeHandler.destroy();
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Forward message to the page
-  window.postMessage(message, '*');
+console.log('Content script loaded on:', window.location.href);
+
+window.addEventListener('load', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('source') === 'extension') {
+    const indicator = document.createElement('div');
+    indicator.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #007bff;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 9999;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    `;
+    indicator.textContent = 'Login to continue using YT Clipper extension';
+    document.body.appendChild(indicator);
+
+    setTimeout(() => {
+      indicator.remove();
+    }, 8000);
+  }
 });
 
 window.addEventListener('message', (event) => {
-  if (event.data?.type === 'AUTH_STATUS_RESPONSE') {
+  if (event.origin !== 'http://localhost:5173') return;
+
+  if (event.data.type === 'AUTH0_TOKEN_UPDATE') {
     chrome.runtime.sendMessage({
-      type: 'AUTH_STATUS_RESPONSE',
-      data: event.data,
+      type: 'AUTH0_TOKEN_UPDATE',
+      token: event.data.token,
+      expiry: event.data.expiry,
+      user: event.data.user,
     });
+  }
+
+  if (event.data.type === 'AUTH0_LOGOUT') {
+    chrome.runtime.sendMessage({ type: 'AUTH0_LOGOUT' });
+  }
+});
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'TOGGLE_CLIPPER') {
+    youtubeHandler.handleClipperToggle(message.enabled);
   }
 });

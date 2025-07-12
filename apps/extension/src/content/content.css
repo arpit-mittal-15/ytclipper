@@ -1,55 +1,35 @@
-/* YTClipper Content Script Styles */
-
-.ytclipper-timestamp {
-  transition: all 0.2s ease;
+/* Base button styles */
+#yt-clipper-button.ytp-button {
+  background-color: #ff6b35 !important;
+  border-radius: 4px !important;
+  margin: 0 4px !important;
 }
 
-.ytclipper-timestamp:hover {
-  width: 4px !important;
-  box-shadow: 0 0 8px rgba(255, 107, 53, 0.5);
+/* Hover effects */
+#yt-clipper-button.ytp-button:hover {
+  background-color: #e05a2a !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.ytclipper-notification {
-  animation: ytclipper-slide-in 0.3s ease-out;
+/* Active state */
+#yt-clipper-button.ytp-button:active {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
-@keyframes ytclipper-slide-in {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+/* Icon sizing */
+#yt-clipper-button.ytp-button svg {
+  width: 20px;
+  height: 20px;
 }
 
-/* Floating action button for quick access */
-.ytclipper-fab {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  width: 56px;
-  height: 56px;
-  background: #ff6b35;
-  border: none;
-  border-radius: 50%;
-  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
-  cursor: pointer;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  transition: all 0.3s ease;
+/* Small player adjustments */
+.ytp-small-mode #yt-clipper-button.ytp-button {
+  padding: 3px !important;
 }
 
-.ytclipper-fab:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
-}
-
-.ytclipper-fab svg {
-  width: 24px;
-  height: 24px;
+.ytp-small-mode #yt-clipper-button.ytp-button svg {
+  width: 16px;
+  height: 16px;
 }
