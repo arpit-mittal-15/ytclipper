@@ -26,6 +26,7 @@ type GoogleOAuthService struct {
 	oauth      *oauth2.Config
 	jwtService *JWTService
 	db         *database.Database
+	server     *config.ServerConfig
 }
 
 type GoogleUserInfo struct {
@@ -39,7 +40,7 @@ type GoogleUserInfo struct {
 	Locale        string `json:"locale"`
 }
 
-func NewGoogleOAuthService(cfg *config.GoogleOAuthConfig, authCfg *config.AuthConfig, jwtService *JWTService, db *database.Database) *GoogleOAuthService {
+func NewGoogleOAuthService(cfg *config.GoogleOAuthConfig, authCfg *config.AuthConfig, jwtService *JWTService, db *database.Database, server *config.ServerConfig) *GoogleOAuthService {
 	oauth := &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
@@ -57,6 +58,7 @@ func NewGoogleOAuthService(cfg *config.GoogleOAuthConfig, authCfg *config.AuthCo
 		oauth:      oauth,
 		jwtService: jwtService,
 		db:         db,
+		server:     server,
 	}
 }
 
@@ -172,7 +174,7 @@ func (g *GoogleOAuthService) CallbackHandler() gin.HandlerFunc {
 
 		// Redirect to frontend
 		frontendURL := g.getFrontendURL(c)
-		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"?auth=success")
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/auth/callback?auth=success")
 	}
 }
 
@@ -210,7 +212,7 @@ func (g *GoogleOAuthService) findOrCreateUser(userInfo *GoogleUserInfo) (*models
 		user.Name = userInfo.Name
 		user.Picture = userInfo.Picture
 		user.EmailVerified = userInfo.VerifiedEmail
-		if err := g.db.Update(ctx, &user); err != nil {
+		if err = g.db.Update(ctx, &user); err != nil {
 			return nil, fmt.Errorf("failed to update user: %w", err)
 		}
 		return &user, nil
@@ -264,7 +266,6 @@ func (g *GoogleOAuthService) setAuthCookies(c *gin.Context, tokenPair *TokenPair
 }
 
 func (g *GoogleOAuthService) getFrontendURL(c *gin.Context) string {
-	// Get the origin or use default
 	origin := c.GetHeader("Origin")
 	if origin == "" {
 		origin = c.GetHeader("Referer")
@@ -275,9 +276,14 @@ func (g *GoogleOAuthService) getFrontendURL(c *gin.Context) string {
 		}
 	}
 
-	// Default fallback based on environment
 	if origin == "" {
-		origin = "http://localhost:5173" // Default development frontend URL
+		if g.server.Env == "development" {
+			origin = "http://localhost:5173"
+		}
+
+		if g.server.Env == "production" {
+			origin = "https://app.ytclipper.com"
+		}
 	}
 
 	log.Info().Str("origin", origin).Msg("Redirecting to frontend URL")

@@ -8,6 +8,7 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   isInitialized: boolean;
+  callbackHandled?: boolean;
 }
 
 const initialState: AuthState = {
@@ -16,6 +17,7 @@ const initialState: AuthState = {
   isLoading: false,
   error: null,
   isInitialized: false,
+  callbackHandled: false,
 };
 
 export const initializeAuth = createAsyncThunk(
@@ -186,14 +188,17 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = !!action.payload;
     },
-    clearError: state => {
+    clearError: (state) => {
       state.error = null;
     },
+    resetCallbackHandled: (state) => {
+      state.callbackHandled = false;
+    },
   },
-  extraReducers: builder => {
+  extraReducers: (builder) => {
     builder
       // Initialize auth
-      .addCase(initializeAuth.pending, state => {
+      .addCase(initializeAuth.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
@@ -203,21 +208,23 @@ const authSlice = createSlice({
         state.isAuthenticated = !!action.payload;
         state.isInitialized = true;
         state.error = null;
+        state.callbackHandled = true;
       })
       .addCase(initializeAuth.rejected, (state, action) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
         state.isInitialized = true;
+        state.callbackHandled = false;
         state.error = action.payload as string;
       })
 
       // Google login
-      .addCase(loginWithGoogle.pending, state => {
+      .addCase(loginWithGoogle.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(loginWithGoogle.fulfilled, state => {
+      .addCase(loginWithGoogle.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
         // Don't set user here - will be set after redirect
@@ -228,7 +235,7 @@ const authSlice = createSlice({
       })
 
       // Email/password login
-      .addCase(loginWithEmailPassword.pending, state => {
+      .addCase(loginWithEmailPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
@@ -244,7 +251,7 @@ const authSlice = createSlice({
       })
 
       // Register
-      .addCase(registerWithEmailPassword.pending, state => {
+      .addCase(registerWithEmailPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
@@ -260,11 +267,11 @@ const authSlice = createSlice({
       })
 
       // Logout
-      .addCase(logout.pending, state => {
+      .addCase(logout.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(logout.fulfilled, state => {
+      .addCase(logout.fulfilled, (state) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
@@ -276,11 +283,11 @@ const authSlice = createSlice({
       })
 
       // Forgot password
-      .addCase(forgotPassword.pending, state => {
+      .addCase(forgotPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(forgotPassword.fulfilled, state => {
+      .addCase(forgotPassword.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
       })
@@ -290,11 +297,11 @@ const authSlice = createSlice({
       })
 
       // Reset password
-      .addCase(resetPassword.pending, state => {
+      .addCase(resetPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(resetPassword.fulfilled, state => {
+      .addCase(resetPassword.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
       })
@@ -304,11 +311,11 @@ const authSlice = createSlice({
       })
 
       // Verify email
-      .addCase(verifyEmail.pending, state => {
+      .addCase(verifyEmail.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(verifyEmail.fulfilled, state => {
+      .addCase(verifyEmail.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
       })
@@ -318,11 +325,11 @@ const authSlice = createSlice({
       })
 
       // Add password
-      .addCase(addPassword.pending, state => {
+      .addCase(addPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(addPassword.fulfilled, state => {
+      .addCase(addPassword.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
       })
@@ -332,7 +339,7 @@ const authSlice = createSlice({
       })
 
       // Handle auth callback
-      .addCase(handleAuthCallback.pending, state => {
+      .addCase(handleAuthCallback.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
@@ -349,5 +356,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setUser, clearError } = authSlice.actions;
+export const { setUser, clearError, resetCallbackHandled } = authSlice.actions;
 export default authSlice.reducer;

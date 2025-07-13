@@ -12,6 +12,7 @@ import {
   VideoDetailPage,
   VideosPage,
 } from './pages';
+import { AuthCallback } from './components/auth-callback';
 
 const App = () => {
   const { isInitialized } = useAuth();
@@ -25,6 +26,7 @@ const App = () => {
       <Routes>
         <Route path='/' element={<HomePage />} />
         <Route path='/auth' element={<LoginPage />} />
+        <Route path='/auth/callback' element={<AuthCallback />} />
 
         <Route
           path='/dashboard'

@@ -73,18 +73,18 @@ func (a *AuthMiddleware) extractToken(c *gin.Context) string {
 	return ""
 }
 
-func (a *AuthMiddleware) extractRefreshToken(c *gin.Context) string {
-	if token, err := c.Cookie("refresh_token"); err == nil {
-		return token
-	}
-	return ""
-}
+// func (a *AuthMiddleware) extractRefreshToken(c *gin.Context) string {
+// 	if token, err := c.Cookie("refresh_token"); err == nil {
+// 		return token
+// 	}
+// 	return ""
+// }
 
-func (a *AuthMiddleware) setAuthCookies(c *gin.Context, tokenPair *TokenPair) {
-	c.SetCookie("access_token", tokenPair.AccessToken, int(tokenPair.ExpiresIn), "/", a.config.CookieDomain, a.config.CookieSecure, a.config.CookieHTTPOnly)
-
-	c.SetCookie("refresh_token", tokenPair.RefreshToken, int(7*24*60*60), "/", a.config.CookieDomain, a.config.CookieSecure, a.config.CookieHTTPOnly)
-}
+// func (a *AuthMiddleware) setAuthCookies(c *gin.Context, tokenPair *TokenPair) {
+// 	c.SetCookie("access_token", tokenPair.AccessToken, int(tokenPair.ExpiresIn), "/", a.config.CookieDomain, a.config.CookieSecure, a.config.CookieHTTPOnly)
+//
+// 	c.SetCookie("refresh_token", tokenPair.RefreshToken, int(7*24*60*60), "/", a.config.CookieDomain, a.config.CookieSecure, a.config.CookieHTTPOnly)
+// }
 
 func (a *AuthMiddleware) setUserContext(c *gin.Context, user *models.User) {
 	c.Set("user_id", user.ID.String())

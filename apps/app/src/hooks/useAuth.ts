@@ -4,7 +4,6 @@ import {
   addPassword,
   clearError,
   forgotPassword,
-  handleAuthCallback,
   initializeAuth,
   loginWithEmailPassword,
   loginWithGoogle,
@@ -27,6 +26,7 @@ export function useAuth() {
     isLoading: authLoading,
     error: authError,
     isInitialized,
+    callbackHandled,
   } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -34,13 +34,6 @@ export function useAuth() {
       dispatch(initializeAuth());
     }
   }, [dispatch, isInitialized]);
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('auth') === 'success') {
-      dispatch(handleAuthCallback());
-    }
-  }, [dispatch]);
 
   const isLoading = authLoading;
 
@@ -244,6 +237,7 @@ export function useAuth() {
     isLoading,
     error: authError,
     isInitialized,
+    callbackHandled,
 
     loginWithGoogle: googleLoginMutation.mutate,
     loginWithEmailPassword: emailPasswordLoginMutation.mutate,

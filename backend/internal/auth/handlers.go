@@ -349,7 +349,7 @@ func (h *AuthHandlers) ResetPasswordHandler(c *gin.Context) {
 	}
 
 	// Validate new password
-	if err := ValidatePassword(req.Password); err != nil {
+	if err = ValidatePassword(req.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -446,7 +446,7 @@ func (h *AuthHandlers) AddPasswordHandler(c *gin.Context) {
 	}
 
 	// Validate password
-	if err := ValidatePassword(req.Password); err != nil {
+	if err = ValidatePassword(req.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

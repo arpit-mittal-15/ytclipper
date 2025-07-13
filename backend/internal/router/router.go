@@ -34,7 +34,7 @@ func SetupRouter(db *database.Database, cfg *config.Config) *gin.Engine {
 
 	jwtService := auth.NewJWTService(&cfg.JWT, db)
 	emailService := auth.NewEmailService()
-	googleService := auth.NewGoogleOAuthService(&cfg.Google, &cfg.Auth, jwtService, db)
+	googleService := auth.NewGoogleOAuthService(&cfg.Google, &cfg.Auth, jwtService, db, &cfg.Server)
 	authMiddleware := auth.NewAuthMiddleware(jwtService, &cfg.Auth, db)
 	authHandlers := auth.NewAuthHandlers(googleService, authMiddleware, jwtService, emailService, db)
 

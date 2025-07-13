@@ -29,8 +29,10 @@ export const LoginPage = () => {
   });
 
   const from = location.state?.from?.pathname || '/dashboard';
+  console.log('Redirecting to:', from);
 
   if (isAuthenticated) {
+    console.log('User is already authenticated, redirecting to:', from);
     return <Navigate to={from} replace />;
   }
 
