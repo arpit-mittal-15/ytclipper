@@ -185,9 +185,18 @@ jobs:
 
           # JWT configuration
           JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_ACCESS_TOKEN_EXPIRY=24h
+          JWT_REFRESH_TOKEN_EXPIRY=672h
+          JWT_ISSUER=ytclipper-api
+          JWT_AUDIENCE=ytclipper-app
+
           AUTH_JWT_SECRET=${{ secrets.AUTH_JWT_SECRET }}
           AUTH_JWT_EXPIRY_HOURS=72
           AUTH_TOKEN_ISSUER=ytclipper-app
+          AUTH_PASSWORD_RESET_EXPIRY=24h
+
+          COOKIE_DOMAIN=.ytclipper.com
+          COOKIE_SECURE=true
 
           # API configuration
           API_TIMEOUT=30s

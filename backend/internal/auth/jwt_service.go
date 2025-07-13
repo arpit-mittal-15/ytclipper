@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,14 +9,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/shubhamku044/ytclipper/internal/config"
+	"github.com/shubhamku044/ytclipper/internal/database"
+	"github.com/shubhamku044/ytclipper/internal/models"
 )
 
-// JWTService handles JWT token operations
 type JWTService struct {
 	config *config.JWTConfig
+	db     *database.Database
 }
 
-// TokenPair represents a pair of access and refresh tokens
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -23,7 +25,6 @@ type TokenPair struct {
 	ExpiresIn    int64  `json:"expires_in"`
 }
 
-// AccessTokenClaims represents the claims in an access token
 type AccessTokenClaims struct {
 	UserID    string `json:"user_id"`
 	Email     string `json:"email"`
@@ -33,28 +34,26 @@ type AccessTokenClaims struct {
 	jwt.RegisteredClaims
 }
 
-// RefreshTokenClaims represents the claims in a refresh token
 type RefreshTokenClaims struct {
 	UserID    string `json:"user_id"`
 	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
-// NewJWTService creates a new JWT service
-func NewJWTService(cfg *config.JWTConfig) *JWTService {
-	return &JWTService{config: cfg}
+func NewJWTService(cfg *config.JWTConfig, db *database.Database) *JWTService {
+	return &JWTService{
+		config: cfg,
+		db:     db,
+	}
 }
 
-// GenerateTokenPair generates a new access and refresh token pair
-func (j *JWTService) GenerateTokenPair(userID, email, name, picture string) (*TokenPair, error) {
-	// Generate access token
-	accessToken, err := j.generateAccessToken(userID, email, name, picture)
+func (j *JWTService) GenerateTokenPairFromUser(user *models.User) (*TokenPair, error) {
+	accessToken, err := j.generateAccessToken(user.ID.String(), user.Email, user.Name, user.Picture)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token: %w", err)
+		return nil, err
 	}
 
-	// Generate refresh token
-	refreshToken, err := j.generateRefreshToken(userID)
+	refreshToken, err := j.generateRefreshToken(user.ID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
@@ -67,7 +66,6 @@ func (j *JWTService) GenerateTokenPair(userID, email, name, picture string) (*To
 	}, nil
 }
 
-// generateAccessToken generates an access token with user claims
 func (j *JWTService) generateAccessToken(userID, email, name, picture string) (string, error) {
 	now := time.Now()
 	claims := AccessTokenClaims{
@@ -90,7 +88,6 @@ func (j *JWTService) generateAccessToken(userID, email, name, picture string) (s
 	return token.SignedString([]byte(j.config.Secret))
 }
 
-// generateRefreshToken generates a refresh token
 func (j *JWTService) generateRefreshToken(userID string) (string, error) {
 	now := time.Now()
 	claims := RefreshTokenClaims{
@@ -110,7 +107,6 @@ func (j *JWTService) generateRefreshToken(userID string) (string, error) {
 	return token.SignedString([]byte(j.config.Secret))
 }
 
-// ValidateAccessToken validates an access token and returns its claims
 func (j *JWTService) ValidateAccessToken(tokenString string) (*AccessTokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &AccessTokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -118,7 +114,6 @@ func (j *JWTService) ValidateAccessToken(tokenString string) (*AccessTokenClaims
 		}
 		return []byte(j.config.Secret), nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
@@ -130,7 +125,6 @@ func (j *JWTService) ValidateAccessToken(tokenString string) (*AccessTokenClaims
 	return nil, fmt.Errorf("invalid token")
 }
 
-// ValidateRefreshToken validates a refresh token and returns its claims
 func (j *JWTService) ValidateRefreshToken(tokenString string) (*RefreshTokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &RefreshTokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -138,7 +132,6 @@ func (j *JWTService) ValidateRefreshToken(tokenString string) (*RefreshTokenClai
 		}
 		return []byte(j.config.Secret), nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
@@ -150,58 +143,55 @@ func (j *JWTService) ValidateRefreshToken(tokenString string) (*RefreshTokenClai
 	return nil, fmt.Errorf("invalid token")
 }
 
-// RefreshAccessToken generates a new access token from a refresh token
 func (j *JWTService) RefreshAccessToken(refreshTokenString string) (*TokenPair, error) {
 	refreshClaims, err := j.ValidateRefreshToken(refreshTokenString)
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh token: %w", err)
 	}
 
-	// Here you would typically fetch user details from database
-	// For now, we'll use the user ID from the refresh token
-	userID := refreshClaims.UserID
+	var user models.User
 
-	// Generate new token pair
-	// Note: In a real implementation, you'd fetch user details from database
-	return j.GenerateTokenPair(userID, "", "", "")
+	err = j.db.DB.NewSelect().
+		Model(&user).
+		Where("id = ?", refreshClaims.UserID).
+		Scan(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	return j.GenerateTokenPairFromUser(&user)
 }
 
-// GenerateAccessToken generates an access token for a user ID (public method)
 func (j *JWTService) GenerateAccessToken(userID uuid.UUID) (string, error) {
 	return j.generateAccessToken(userID.String(), "", "", "")
 }
 
-// GenerateRefreshToken generates a refresh token for a user ID (public method)
 func (j *JWTService) GenerateRefreshToken(userID uuid.UUID) (string, error) {
 	return j.generateRefreshToken(userID.String())
 }
 
-// SetTokenCookies sets JWT tokens as HTTP-only cookies
 func (j *JWTService) SetTokenCookies(c *gin.Context, accessToken, refreshToken string) {
-	// Set access token cookie
 	c.SetCookie(
 		"access_token",
 		accessToken,
 		int(j.config.AccessTokenExpiry.Seconds()),
 		"/",
 		"",
-		false, // secure - should be true in production with HTTPS
-		true,  // httpOnly
+		false,
+		true,
 	)
 
-	// Set refresh token cookie
 	c.SetCookie(
 		"refresh_token",
 		refreshToken,
 		int(j.config.RefreshTokenExpiry.Seconds()),
 		"/",
 		"",
-		false, // secure - should be true in production with HTTPS
-		true,  // httpOnly
+		false,
+		true,
 	)
 }
 
-// ClearTokenCookies clears JWT token cookies
 func (j *JWTService) ClearTokenCookies(c *gin.Context) {
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("refresh_token", "", -1, "/", "", false, true)

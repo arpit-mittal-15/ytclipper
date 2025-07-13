@@ -108,7 +108,7 @@ func Load() *Config {
 		JWT: JWTConfig{
 			Secret:             getEnv("JWT_SECRET", "ytclipper_jwt_secret_key"),
 			AccessTokenExpiry:  getDurationEnv("JWT_ACCESS_TOKEN_EXPIRY", 15*time.Minute),
-			RefreshTokenExpiry: getDurationEnv("JWT_REFRESH_TOKEN_EXPIRY", 7*24*time.Hour), // 7 days
+			RefreshTokenExpiry: getDurationEnv("JWT_REFRESH_TOKEN_EXPIRY", 7*24*time.Hour),
 			TokenIssuer:        getEnv("JWT_ISSUER", "ytclipper-api"),
 			TokenAudience:      getEnv("JWT_AUDIENCE", "ytclipper-app"),
 		},

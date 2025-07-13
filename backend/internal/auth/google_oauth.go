@@ -1,3 +1,4 @@
+// Package auth
 package auth
 
 import (
@@ -77,12 +78,10 @@ func (g *GoogleOAuthService) LoginHandler() gin.HandlerFunc {
 			return
 		}
 
-		// Store state in secure cookie
 		c.SetCookie("oauth_state", state, 300, "/", g.authConfig.CookieDomain, g.authConfig.CookieSecure, g.authConfig.CookieHTTPOnly)
 
 		authURL := g.oauth.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 
-		// For API requests, return the URL instead of redirecting
 		if c.GetHeader("Accept") == "application/json" {
 			middleware.RespondWithOK(c, gin.H{"auth_url": authURL})
 			return

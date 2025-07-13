@@ -90,29 +90,23 @@ func (h *AuthHandlers) GetAccessToken() gin.HandlerFunc {
 	}
 }
 
-// SetupAuthRoutes sets up all authentication routes
 func (h *AuthHandlers) SetupAuthRoutes(r *gin.Engine) {
 	auth := r.Group("/auth")
 	{
-		// Google OAuth routes
 		auth.GET("/google/login", h.googleService.LoginHandler())
 		auth.GET("/google/callback", h.googleService.CallbackHandler())
 
-		// Email/password authentication routes
 		auth.POST("/register", h.RegisterHandler)
 		auth.POST("/login", h.LoginHandler)
 		auth.POST("/forgot-password", h.ForgotPasswordHandler)
 		auth.POST("/reset-password", h.ResetPasswordHandler)
 		auth.POST("/verify-email", h.VerifyEmailHandler)
 
-		// Account linking routes
 		auth.POST("/add-password", h.authMiddleware.RequireAuth(), h.AddPasswordHandler)
 
-		// Authentication management
 		auth.POST("/logout", h.googleService.LogoutHandler())
 		auth.POST("/refresh", h.googleService.RefreshTokenHandler())
 
-		// User info routes (require authentication)
 		auth.GET("/me", h.authMiddleware.RequireAuth(), h.GetCurrentUserHandler())
 		auth.GET("/token", h.authMiddleware.RequireAuth(), h.GetAccessToken())
 	}
@@ -152,7 +146,6 @@ type AddPasswordRequest struct {
 	Password string `json:"password" binding:"required,min=8"`
 }
 
-// RegisterHandler handles user registration with email and password
 func (h *AuthHandlers) RegisterHandler(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -162,7 +155,6 @@ func (h *AuthHandlers) RegisterHandler(c *gin.Context) {
 
 	ctx := context.Background()
 
-	// Check if user already exists
 	var existingUser models.User
 	err := h.db.DB.NewSelect().
 		Model(&existingUser).
@@ -173,27 +165,23 @@ func (h *AuthHandlers) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// Validate password strength
-	if err := ValidatePassword(req.Password); err != nil {
+	if err = ValidatePassword(req.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Hash password
 	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
-	// Generate email verification token
 	verificationToken, err := h.emailService.GenerateToken()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate verification token"})
 		return
 	}
 
-	// Create user
 	user := models.User{
 		Name:                    req.Name,
 		Email:                   req.Email,
@@ -208,10 +196,7 @@ func (h *AuthHandlers) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// Send verification email
 	if err := h.emailService.SendVerificationEmail(user.Email, verificationToken); err != nil {
-		// Log error but don't fail registration
-		// In production, you might want to queue this for retry
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "User created successfully, but verification email failed to send",
 			"user":    user,
@@ -225,7 +210,6 @@ func (h *AuthHandlers) RegisterHandler(c *gin.Context) {
 	})
 }
 
-// LoginHandler handles user login with email and password
 func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -235,36 +219,33 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 
 	ctx := context.Background()
 
-	// Find user by email
 	var user models.User
 	err := h.db.DB.NewSelect().
 		Model(&user).
 		Where("email = ?", req.Email).
 		Scan(ctx)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		middleware.RespondWithError(c, 404, "USER_NOT_FOUND", "user not found", nil)
 		return
 	}
 
-	// Check if user has a password (might be OAuth only)
 	if user.Password == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "This account uses OAuth login. Please use Google login or add a password first."})
 		return
 	}
 
-	// Verify password
-	if err := CheckPassword(req.Password, user.Password); err != nil {
+	if err = CheckPassword(req.Password, user.Password); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	// Check if email is verified
+	/* Skip this for now
 	if !user.EmailVerified {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Please verify your email before logging in"})
 		return
 	}
+	*/
 
-	// Generate JWT tokens
 	accessToken, err := h.jwtService.GenerateAccessToken(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
@@ -277,10 +258,8 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// Set cookies
 	h.jwtService.SetTokenCookies(c, accessToken, refreshToken)
 
-	// Determine available authentication methods
 	authMethods := []string{}
 	if user.GoogleID != "" {
 		authMethods = append(authMethods, "google")
@@ -298,7 +277,6 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	})
 }
 
-// ForgotPasswordHandler handles password reset requests
 func (h *AuthHandlers) ForgotPasswordHandler(c *gin.Context) {
 	var req ForgotPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
