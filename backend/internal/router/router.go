@@ -86,7 +86,7 @@ func SetupRouter(db *database.Database, cfg *config.Config) *gin.Engine {
 		{
 			authRoutes.GET("/user", authHandlers.GetCurrentUserHandler())
 			authRoutes.GET("/me", authMiddleware.RequireAuth(), authHandlers.GetCurrentUserHandler())
-
+			authRoutes.GET("/session", authMiddleware.RequireAuth(), handlers.GetSession)
 			authRoutes.POST("/verify", authMiddleware.RequireAuth(), handlers.VerifyToken)
 			authRoutes.GET("/profile", authMiddleware.RequireAuth(), handlers.GetUserProfile)
 		}

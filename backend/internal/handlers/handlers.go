@@ -230,6 +230,42 @@ func DeleteTimestamp(c *gin.Context) {
 		"user_id":      userID,
 	})
 }
+func GetSession(c *gin.Context) {
+	// Get user ID from context (set by JWT middleware)
+	userID, exists := auth.GetUserID(c)
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "NO_USER_ID", "User ID not found in token", nil)
+		return
+	}
+
+	// Get full claims
+	claims, exists := auth.GetClaims(c)
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "NO_CLAIMS", "Token claims not found", nil)
+		return
+	}
+
+	// Get current time for session info
+	now := time.Now().UTC()
+
+	// Create session response
+	sessionInfo := gin.H{
+		"authenticated": true,
+		"user_id":       userID,
+		"email":         claims.RegisteredClaims.Subject,
+		"session_start": claims.RegisteredClaims.IssuedAt.Time.Format(time.RFC3339),
+		"expires_at":    claims.RegisteredClaims.ExpiresAt.Time.Format(time.RFC3339),
+		"current_time":  now.Format(time.RFC3339),
+		"token_valid":   claims.RegisteredClaims.ExpiresAt.Time.After(now),
+		"issuer":        claims.RegisteredClaims.Issuer,
+		"audience":      claims.RegisteredClaims.Audience,
+	}
+
+	middleware.RespondWithOK(c, gin.H{
+		"session": sessionInfo,
+		"message": "Session is active and user is authenticated",
+	})
+}
 
 // generateID generates a simple timestamp-based ID
 // In production, you'd use a proper UUID generator
