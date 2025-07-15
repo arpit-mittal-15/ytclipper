@@ -7,7 +7,7 @@ const manifest: Manifest = {
   description: '__MSG_extensionDescription__',
   default_locale: 'en',
 
-  permissions: ['activeTab', 'storage', 'scripting', 'tabs'],
+  permissions: ['activeTab', 'storage', 'scripting', 'tabs', 'cookies'],
 
   host_permissions: [
     'https://www.youtube.com/*',
@@ -15,7 +15,9 @@ const manifest: Manifest = {
     'https://app.ytclipper.com/*',
     'https://ytclipper.com/*',
     'http://localhost:5173/*',
+    'http://localhost:8080/*',
   ],
+  optional_permissions: ['https://app.ytclipper.com/*'],
 
   background: {
     service_worker: 'src/background/index.js',

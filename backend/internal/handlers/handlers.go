@@ -230,6 +230,7 @@ func DeleteTimestamp(c *gin.Context) {
 		"user_id":      userID,
 	})
 }
+
 func GetSession(c *gin.Context) {
 	// Get user ID from context (set by JWT middleware)
 	userID, exists := auth.GetUserID(c)

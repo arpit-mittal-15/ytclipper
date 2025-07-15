@@ -4,6 +4,8 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
 export interface AuthState {
   user: User | null;
+  token: string | null;
+  tokenExpiry: number | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -13,6 +15,8 @@ export interface AuthState {
 
 const initialState: AuthState = {
   user: null,
+  token: null,
+  tokenExpiry: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -25,6 +29,7 @@ export const initializeAuth = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const user = await authApi.getCurrentUser();
+      console.log('user', user);
       return user;
     } catch (error) {
       return rejectWithValue(
@@ -169,6 +174,7 @@ export const handleAuthCallback = createAsyncThunk(
       if (success) {
         // Get the user data after successful OAuth
         const user = await authApi.getCurrentUser();
+        console.log('user', user);
         return user;
       }
       return null;
@@ -205,6 +211,8 @@ const authSlice = createSlice({
       .addCase(initializeAuth.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
+        state.token = action.payload.token;
+        state.tokenExpiry = action.payload.expiresAt;
         state.isAuthenticated = !!action.payload;
         state.isInitialized = true;
         state.error = null;
@@ -224,9 +232,11 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(loginWithGoogle.fulfilled, (state) => {
+      .addCase(loginWithGoogle.fulfilled, (state, action) => {
         state.isLoading = false;
         state.error = null;
+        state.token = action.payload.token;
+        state.tokenExpiry = action.payload.expiresAt;
         // Don't set user here - will be set after redirect
       })
       .addCase(loginWithGoogle.rejected, (state, action) => {
@@ -276,6 +286,8 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         state.error = null;
+        state.token = null;
+        state.tokenExpiry = null;
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false;

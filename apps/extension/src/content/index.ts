@@ -630,27 +630,36 @@ window.addEventListener('load', () => {
   }
 });
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'TOGGLE_CLIPPER') {
+    youtubeHandler.handleClipperToggle(message.enabled);
+  }
+});
+chrome.runtime.sendMessage({ type: 'CHECK_AUTH' }, (response) => {
+  if (response.authenticated) {
+    console.log('Logged in as:', response.user);
+    // Show note-taking UI, etc.
+  } else {
+    console.log('Not logged in');
+    // Optionally ask user to log in
+  }
+});
+
 window.addEventListener('message', (event) => {
   if (event.origin !== 'http://localhost:5173') {
     return;
   }
 
-  if (event.data.type === 'AUTH0_TOKEN_UPDATE') {
+  if (event.data.type === 'AUTH_TOKEN_UPDATE') {
     chrome.runtime.sendMessage({
-      type: 'AUTH0_TOKEN_UPDATE',
+      type: 'AUTH_TOKEN_UPDATE',
       token: event.data.token,
       expiry: event.data.expiry,
       user: event.data.user,
     });
   }
 
-  if (event.data.type === 'AUTH0_LOGOUT') {
-    chrome.runtime.sendMessage({ type: 'AUTH0_LOGOUT' });
-  }
-});
-
-chrome.runtime.onMessage.addListener((message) => {
-  if (message.type === 'TOGGLE_CLIPPER') {
-    youtubeHandler.handleClipperToggle(message.enabled);
+  if (event.data.type === 'AUTH_LOGOUT') {
+    chrome.runtime.sendMessage({ type: 'AUTH_LOGOUT' });
   }
 });

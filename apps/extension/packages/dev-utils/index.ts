@@ -6,6 +6,7 @@ export interface Manifest {
   default_locale?: string;
   permissions?: string[];
   host_permissions?: string[];
+  optional_permissions?: string[];
   background?: {
     service_worker: string;
     type?: 'module';

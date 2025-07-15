@@ -13,9 +13,70 @@ import {
   VideosPage,
 } from './pages';
 import { AuthCallback } from './components/auth-callback';
+import { useEffect } from 'react';
+
+import type { User } from '@/types';
 
 const App = () => {
-  const { isInitialized } = useAuth();
+  const { isInitialized, isAuthenticated, user, token, tokenExpiry } =
+    useAuth();
+
+  const notifyExtensionAuthUpdate = (
+    authToken: string | null,
+    expiry: number | null,
+    userInfo: User,
+  ) => {
+    window.postMessage(
+      {
+        type: 'AUTH_TOKEN_UPDATE',
+        token: authToken,
+        expiry,
+        user: userInfo,
+      },
+      'http://localhost:5173',
+    );
+  };
+
+  const notifyExtensionLogout = () => {
+    window.postMessage(
+      {
+        type: 'AUTH_LOGOUT',
+      },
+      'http://localhost:5173',
+    );
+  };
+
+  // Handle auth state changes
+  useEffect(() => {
+    if (isInitialized) {
+      if (isAuthenticated && user) {
+        // Send real auth data to extension
+        notifyExtensionAuthUpdate(token, tokenExpiry, user);
+      } else {
+        // User logged out
+        notifyExtensionLogout();
+      }
+    }
+  }, [isInitialized, isAuthenticated, user, token, tokenExpiry]);
+
+  // Handle extension requests for auth status
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== window) {
+        return;
+      }
+      if (event.data.type === 'CHECK_AUTH_STATUS') {
+        if (isAuthenticated && user) {
+          notifyExtensionAuthUpdate(token, tokenExpiry, user);
+        } else {
+          notifyExtensionLogout();
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [user, isAuthenticated, tokenExpiry, token]);
 
   if (!isInitialized) {
     return <Loading />;

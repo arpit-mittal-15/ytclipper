@@ -50,12 +50,12 @@ func NewJWTService(cfg *config.JWTConfig, authCfg *config.AuthConfig, db *databa
 }
 
 func (j *JWTService) GenerateTokenPairFromUser(user *models.User) (*TokenPair, error) {
-	accessToken, err := j.generateAccessToken(user.ID.String(), user.Email, user.Name, user.Picture)
+	accessToken, _, err := j.generateAccessToken(user.ID.String(), user.Email, user.Name, user.Picture)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := j.generateRefreshToken(user.ID.String())
+	refreshToken, _, err := j.generateRefreshToken(user.ID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
@@ -68,8 +68,9 @@ func (j *JWTService) GenerateTokenPairFromUser(user *models.User) (*TokenPair, e
 	}, nil
 }
 
-func (j *JWTService) generateAccessToken(userID, email, name, picture string) (string, error) {
+func (j *JWTService) generateAccessToken(userID, email, name, picture string) (string, int64, error) {
 	now := time.Now()
+	expiryTime := now.Add(j.config.AccessTokenExpiry)
 	claims := AccessTokenClaims{
 		UserID:    userID,
 		Email:     email,
@@ -87,11 +88,16 @@ func (j *JWTService) generateAccessToken(userID, email, name, picture string) (s
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.config.Secret))
+	signed, err := token.SignedString([]byte(j.config.Secret))
+	if err != nil {
+		return "", 0, err
+	}
+	return signed, expiryTime.Unix(), nil
 }
 
-func (j *JWTService) generateRefreshToken(userID string) (string, error) {
+func (j *JWTService) generateRefreshToken(userID string) (string, int64, error) {
 	now := time.Now()
+	expiryTime := now.Add(j.config.AccessTokenExpiry)
 	claims := RefreshTokenClaims{
 		UserID:    userID,
 		TokenType: "refresh",
@@ -106,7 +112,11 @@ func (j *JWTService) generateRefreshToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.config.Secret))
+	signed, err := token.SignedString([]byte(j.config.Secret))
+	if err != nil {
+		return "", 0, err
+	}
+	return signed, expiryTime.Unix(), nil
 }
 
 func (j *JWTService) ValidateAccessToken(tokenString string) (*AccessTokenClaims, error) {
@@ -164,11 +174,11 @@ func (j *JWTService) RefreshAccessToken(refreshTokenString string) (*TokenPair, 
 	return j.GenerateTokenPairFromUser(&user)
 }
 
-func (j *JWTService) GenerateAccessToken(userID uuid.UUID) (string, error) {
+func (j *JWTService) GenerateAccessToken(userID uuid.UUID) (string, int64, error) {
 	return j.generateAccessToken(userID.String(), "", "", "")
 }
 
-func (j *JWTService) GenerateRefreshToken(userID uuid.UUID) (string, error) {
+func (j *JWTService) GenerateRefreshToken(userID uuid.UUID) (string, int64, error) {
 	return j.generateRefreshToken(userID.String())
 }
 

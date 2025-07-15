@@ -149,14 +149,14 @@ func (g *GoogleOAuthService) CallbackHandler() gin.HandlerFunc {
 		}
 
 		// Generate JWT tokens using the database user ID
-		accessToken, err := g.jwtService.GenerateAccessToken(user.ID)
+		accessToken, _, err := g.jwtService.GenerateAccessToken(user.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to generate access token")
 			middleware.RespondWithError(c, http.StatusInternalServerError, "JWT_ERROR", "Failed to generate authentication tokens", nil)
 			return
 		}
 
-		refreshToken, err := g.jwtService.GenerateRefreshToken(user.ID)
+		refreshToken, _, err := g.jwtService.GenerateRefreshToken(user.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to generate refresh token")
 			middleware.RespondWithError(c, http.StatusInternalServerError, "JWT_ERROR", "Failed to generate authentication tokens", nil)

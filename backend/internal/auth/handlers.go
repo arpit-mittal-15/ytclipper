@@ -2,10 +2,12 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/shubhamku044/ytclipper/internal/database"
 	"github.com/shubhamku044/ytclipper/internal/middleware"
 	"github.com/shubhamku044/ytclipper/internal/models"
@@ -34,6 +36,18 @@ func (h *AuthHandlers) GetCurrentUser() gin.HandlerFunc {
 	return h.authMiddleware.RequireAuth()
 }
 
+func extractExpiryFromToken(tokenStr string) (int64, error) {
+	parser := jwt.NewParser()
+	token, _, err := parser.ParseUnverified(tokenStr, &jwt.RegisteredClaims{})
+	if err != nil {
+		return 0, err
+	}
+	if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok && claims.ExpiresAt != nil {
+		return claims.ExpiresAt.Time.Unix(), nil
+	}
+	return 0, fmt.Errorf("no expiry in token")
+}
+
 func (h *AuthHandlers) GetCurrentUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, exists := GetUser(c)
@@ -42,7 +56,6 @@ func (h *AuthHandlers) GetCurrentUserHandler() gin.HandlerFunc {
 			return
 		}
 
-		// Determine available authentication methods
 		authMethods := []string{}
 		if user.GoogleID != "" {
 			authMethods = append(authMethods, "google")
@@ -51,27 +64,40 @@ func (h *AuthHandlers) GetCurrentUserHandler() gin.HandlerFunc {
 			authMethods = append(authMethods, "password")
 		}
 
-		// Determine primary provider
-		primaryProvider := "password"
-		if user.Provider != nil {
-			primaryProvider = *user.Provider
+		// primaryProvider := "password"
+		// if user.Provider != nil {
+		// primaryProvider = *user.Provider
+		// }
+
+		accessToken, err1 := c.Cookie("access_token")
+		refreshToken, err2 := c.Cookie("refresh_token")
+
+		var accessTokenExpiry int64
+		var refreshTokenExpiry int64
+
+		if err1 == nil {
+			if exp, err := extractExpiryFromToken(accessToken); err == nil {
+				accessTokenExpiry = exp
+			}
 		}
 
-		userResponse := gin.H{
-			"id":                 user.ID,
-			"email":              user.Email,
-			"name":               user.Name,
-			"picture":            user.Picture,
-			"email_verified":     user.EmailVerified,
-			"primary_provider":   primaryProvider,
-			"auth_methods":       authMethods,
-			"has_password":       user.Password != "",
-			"has_google_account": user.GoogleID != "",
-			"created_at":         user.CreatedAt,
-			"updated_at":         user.UpdatedAt,
+		if err2 == nil {
+			if exp, err := extractExpiryFromToken(refreshToken); err == nil {
+				refreshTokenExpiry = exp
+			}
 		}
 
-		middleware.RespondWithOK(c, userResponse)
+		response := gin.H{
+			"message":              "User fetched successfully",
+			"user":                 user,
+			"authMethods":          authMethods,
+			"access_token":         accessToken,
+			"refresh_token":        refreshToken,
+			"access_token_expiry":  accessTokenExpiry,
+			"refresh_token_expiry": refreshTokenExpiry,
+		}
+
+		middleware.RespondWithOK(c, response)
 	}
 }
 
@@ -246,13 +272,13 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	}
 	*/
 
-	accessToken, err := h.jwtService.GenerateAccessToken(user.ID)
+	accessToken, accessTokenExpiry, err := h.jwtService.GenerateAccessToken(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	refreshToken, err := h.jwtService.GenerateRefreshToken(user.ID)
+	refreshToken, refreshTokenExpiry, err := h.jwtService.GenerateRefreshToken(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return
@@ -268,13 +294,17 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 		authMethods = append(authMethods, "password")
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":      "Login successful",
-		"user":         user,
-		"authMethods":  authMethods,
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
-	})
+	response := gin.H{
+		"message":              "Login successful",
+		"user":                 user,
+		"authMethods":          authMethods,
+		"access_token":         accessToken,
+		"refresh_token":        refreshToken,
+		"access_token_expiry":  accessTokenExpiry,
+		"refresh_token_expiry": refreshTokenExpiry,
+	}
+
+	middleware.RespondWithOK(c, response)
 }
 
 func (h *AuthHandlers) ForgotPasswordHandler(c *gin.Context) {

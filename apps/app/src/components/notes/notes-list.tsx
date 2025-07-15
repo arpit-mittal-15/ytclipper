@@ -8,7 +8,6 @@ interface NotesListProps {
 }
 
 export const NotesList = ({ notes, onTimestampClick }: NotesListProps) => {
-  // Sort notes by timestamp
   const sortedNotes = [...notes].sort(
     (a, b) => a.timestampSeconds - b.timestampSeconds,
   );

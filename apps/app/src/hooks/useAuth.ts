@@ -22,6 +22,8 @@ export function useAuth() {
 
   const {
     user,
+    token,
+    tokenExpiry,
     isAuthenticated,
     isLoading: authLoading,
     error: authError,
@@ -235,6 +237,8 @@ export function useAuth() {
     user,
     isAuthenticated,
     isLoading,
+    token,
+    tokenExpiry,
     error: authError,
     isInitialized,
     callbackHandled,

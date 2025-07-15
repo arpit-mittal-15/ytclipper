@@ -3,6 +3,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,12 @@ func SetupRouter(db *database.Database, cfg *config.Config) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
+		AllowOriginFunc: func(origin string) bool {
+			return strings.HasPrefix(origin, "chrome-extension://") ||
+				strings.HasPrefix(origin, "http://localhost:5173") ||
+				strings.HasPrefix(origin, "https://app.ytclipper.com") ||
+				strings.HasPrefix(origin, "https://app-staging.ytclipper.com")
+		},
 		AllowOrigins: []string{
 			"http://localhost:3000",
 			"http://localhost:5173",

@@ -2,6 +2,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  token: null | string;
+  token_expiry: null | number;
   picture?: string;
   email_verified: boolean;
   primary_provider: string;
