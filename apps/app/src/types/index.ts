@@ -6,10 +6,11 @@ export interface User {
   token_expiry: null | number;
   picture?: string;
   email_verified: boolean;
-  primary_provider: string;
-  auth_methods: string[];
-  has_password: boolean;
-  has_google_account: boolean;
+  provider?: string; // Add provider field from the API response
+  primary_provider?: string; // Keep for backward compatibility
+  auth_methods?: string[];
+  has_password?: boolean;
+  has_google_account?: boolean;
   created_at: string;
   updated_at: string;
 }

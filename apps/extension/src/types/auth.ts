@@ -36,6 +36,7 @@ export interface UserInfo {
   name: string;
   email: string;
   picture?: string;
+  access_token: string;
   [key: string]: unknown;
 }
 
@@ -47,10 +48,10 @@ export interface AuthStorage {
 
 export type AuthMessage =
   | {
-    type: 'AUTH_TOKEN_UPDATE';
-    token: string;
-    expiry: number;
-    user: UserInfo;
-  }
+      type: 'AUTH_TOKEN_UPDATE';
+      token: string;
+      expiry: number;
+      user: UserInfo;
+    }
   | { type: 'AUTH_LOGOUT' }
   | { type: 'CHECK_AUTH' };

@@ -50,7 +50,7 @@ func (a *AuthMiddleware) JWTMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
+		c.Set("claims", claims)
 		a.setUserContext(c, &user)
 		c.Next()
 	}

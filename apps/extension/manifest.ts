@@ -55,6 +55,16 @@ const manifest: Manifest = {
       '128': 'icon128.png',
     },
   },
+
+  externally_connectable: {
+    matches: [
+      'https://app.ytclipper.com/*',
+      'https://ytclipper.com/*',
+      'http://localhost:5173/*',
+      'http://localhost:8080/*',
+    ],
+  },
+
   homepage_url: 'https://ytclipper.com',
 };
 

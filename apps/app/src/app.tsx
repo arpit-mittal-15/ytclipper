@@ -1,5 +1,7 @@
 import { Route, Routes } from 'react-router';
 
+import { useEffect } from 'react';
+import { AuthCallback } from './components/auth-callback';
 import Loading from './components/loading';
 import { NotificationSystem } from './components/NotificationSystem';
 import { ProtectedRoute } from './components/protected-route';
@@ -12,65 +14,35 @@ import {
   VideoDetailPage,
   VideosPage,
 } from './pages';
-import { AuthCallback } from './components/auth-callback';
-import { useEffect } from 'react';
-
-import type { User } from '@/types';
+import { syncAuthState } from './services/extension-sync';
 
 const App = () => {
   const { isInitialized, isAuthenticated, user, token, tokenExpiry } =
     useAuth();
 
-  const notifyExtensionAuthUpdate = (
-    authToken: string | null,
-    expiry: number | null,
-    userInfo: User,
-  ) => {
-    window.postMessage(
-      {
-        type: 'AUTH_TOKEN_UPDATE',
-        token: authToken,
-        expiry,
-        user: userInfo,
-      },
-      'http://localhost:5173',
-    );
-  };
-
-  const notifyExtensionLogout = () => {
-    window.postMessage(
-      {
-        type: 'AUTH_LOGOUT',
-      },
-      'http://localhost:5173',
-    );
-  };
-
-  // Handle auth state changes
   useEffect(() => {
     if (isInitialized) {
-      if (isAuthenticated && user) {
-        // Send real auth data to extension
-        notifyExtensionAuthUpdate(token, tokenExpiry, user);
-      } else {
-        // User logged out
-        notifyExtensionLogout();
-      }
+      syncAuthState(isAuthenticated, user)
+        .then((result) => {
+          if (result.success) {
+            console.log('✅ App-level extension sync successful');
+          } else {
+            console.warn('❌ App-level extension sync failed:', result.error);
+          }
+        })
+        .catch((error) => {
+          console.warn('❌ App-level extension sync error:', error);
+        });
     }
   }, [isInitialized, isAuthenticated, user, token, tokenExpiry]);
 
-  // Handle extension requests for auth status
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.source !== window) {
         return;
       }
       if (event.data.type === 'CHECK_AUTH_STATUS') {
-        if (isAuthenticated && user) {
-          notifyExtensionAuthUpdate(token, tokenExpiry, user);
-        } else {
-          notifyExtensionLogout();
-        }
+        syncAuthState(isAuthenticated, user).catch(console.warn);
       }
     };
 
@@ -88,7 +60,6 @@ const App = () => {
         <Route path='/' element={<HomePage />} />
         <Route path='/auth' element={<LoginPage />} />
         <Route path='/auth/callback' element={<AuthCallback />} />
-
         <Route
           path='/dashboard'
           element={

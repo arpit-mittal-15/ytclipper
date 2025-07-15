@@ -63,6 +63,10 @@ const Popup: React.FC = () => {
   const [currentTabUrl, setCurrentTabUrl] = useState<string>('');
   const [latestNotes, setLatestNotes] = useState<Note[]>([]);
 
+  const isTokenValid = (tokenExpiry?: number): boolean => {
+    return tokenExpiry ? Date.now() < tokenExpiry * 1000 : false;
+  };
+
   const checkAuthStatus = useCallback(async () => {
     try {
       const result = (await chrome.storage.sync.get([
@@ -84,6 +88,8 @@ const Popup: React.FC = () => {
           'token_expiry',
           'user_info',
         ]);
+      } else {
+        console.log('No valid auth token found');
       }
       setClipperEnabled(result.clipper_enabled ?? true);
     } catch (err) {
@@ -96,7 +102,7 @@ const Popup: React.FC = () => {
 
   useEffect(() => {
     checkAuthStatus();
-
+    console.log('Checking current tab URL');
     chrome.tabs.query(
       {
         active: true,
@@ -111,10 +117,6 @@ const Popup: React.FC = () => {
 
     setLatestNotes(mockNotes.slice(0, 3));
   }, [checkAuthStatus]);
-
-  const isTokenValid = (tokenExpiry?: number): boolean => {
-    return tokenExpiry ? Date.now() < tokenExpiry : false;
-  };
 
   const toggleClipper = async () => {
     const newState = !clipperEnabled;
@@ -308,6 +310,17 @@ const Popup: React.FC = () => {
               className='btn-primary'
             >
               Sign In
+            </button>
+            <button
+              onClick={async () => {
+                const storage = await chrome.storage.sync.get(null);
+                console.log('All storage data:', storage);
+                console.log('Storage keys:', Object.keys(storage));
+              }}
+              className='btn-secondary'
+              style={{ marginTop: '10px' }}
+            >
+              Debug Storage
             </button>
           </div>
         </div>

@@ -91,9 +91,19 @@ class AuthApiService {
     // Attempt to fetch the current user
     console.log('🔍 Making request to /auth/me');
     try {
-      const response = await this.request<User>('/auth/me');
-      console.log('✅ getCurrentUser success:', response);
-      return response;
+      const response = await this.request<{
+        user: Omit<User, 'token' | 'token_expiry'>;
+        access_token: string;
+        access_token_expiry: number;
+      }>('/auth/me');
+
+      const user: User = {
+        ...response.user,
+        token: response.access_token,
+        token_expiry: response.access_token_expiry,
+      };
+
+      return user;
     } catch (error) {
       console.log('❌ getCurrentUser error:', error);
       if (
@@ -108,19 +118,42 @@ class AuthApiService {
   }
 
   async login(credentials: LoginRequest): Promise<User> {
-    const response = await this.request<{ user: User }>('/auth/login', {
+    const response = await this.request<{
+      user: Omit<User, 'token' | 'token_expiry'>;
+      access_token?: string;
+      access_token_expiry?: number;
+    }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
-    return response.user;
+
+    const user: User = {
+      ...response.user,
+      token: response.access_token || null,
+      token_expiry: response.access_token_expiry || null,
+    };
+
+    return user;
   }
 
   async register(userData: RegisterRequest): Promise<User> {
-    const response = await this.request<{ user: User }>('/auth/register', {
+    const response = await this.request<{
+      user: Omit<User, 'token' | 'token_expiry'>;
+      access_token?: string;
+      access_token_expiry?: number;
+    }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
-    return response.user;
+
+    // Transform the response to match the expected User interface
+    const user: User = {
+      ...response.user,
+      token: response.access_token || null,
+      token_expiry: response.access_token_expiry || null,
+    };
+
+    return user;
   }
 
   async loginWithGoogle(): Promise<GoogleLoginResponse> {

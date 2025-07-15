@@ -1,4 +1,4 @@
-import { authApi } from '@/services';
+import { authApi, extensionMessaging } from '@/services';
 import type { User } from '@/types';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
@@ -186,6 +186,45 @@ export const handleAuthCallback = createAsyncThunk(
   },
 );
 
+/**
+ * Helper function to notify extension of authentication state changes
+ */
+const notifyExtension = {
+  authSuccess: (user: User, token?: string, expiry?: number) => {
+    extensionMessaging
+      .notifyAuthSuccess(
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name || '',
+          createdAt: user.created_at,
+        },
+        token,
+        expiry,
+      )
+      .catch(console.warn);
+  },
+
+  authUpdate: (user: User, token?: string, expiry?: number) => {
+    extensionMessaging
+      .notifyAuthUpdate(
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name || '',
+          createdAt: user.created_at,
+        },
+        token,
+        expiry,
+      )
+      .catch(console.warn);
+  },
+
+  logout: () => {
+    extensionMessaging.notifyAuthLogout().catch(console.warn);
+  },
+};
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -211,12 +250,21 @@ const authSlice = createSlice({
       .addCase(initializeAuth.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
-        state.token = action.payload.token;
-        state.tokenExpiry = action.payload.expiresAt;
+        state.token = action.payload?.token || null;
+        state.tokenExpiry = action.payload?.token_expiry || null;
         state.isAuthenticated = !!action.payload;
         state.isInitialized = true;
         state.error = null;
         state.callbackHandled = true;
+
+        // Notify extension of auth state
+        if (action.payload) {
+          notifyExtension.authUpdate(
+            action.payload,
+            action.payload.token || undefined,
+            action.payload.token_expiry || undefined,
+          );
+        }
       })
       .addCase(initializeAuth.rejected, (state, action) => {
         state.isLoading = false;
@@ -232,11 +280,9 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(loginWithGoogle.fulfilled, (state, action) => {
+      .addCase(loginWithGoogle.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
-        state.token = action.payload.token;
-        state.tokenExpiry = action.payload.expiresAt;
         // Don't set user here - will be set after redirect
       })
       .addCase(loginWithGoogle.rejected, (state, action) => {
@@ -254,6 +300,13 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.error = null;
+
+        // Notify extension of successful login
+        notifyExtension.authSuccess(
+          action.payload,
+          action.payload.token || undefined,
+          action.payload.token_expiry || undefined,
+        );
       })
       .addCase(loginWithEmailPassword.rejected, (state, action) => {
         state.isLoading = false;
@@ -270,6 +323,13 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.error = null;
+
+        // Notify extension of successful registration
+        notifyExtension.authSuccess(
+          action.payload,
+          action.payload.token || undefined,
+          action.payload.token_expiry || undefined,
+        );
       })
       .addCase(registerWithEmailPassword.rejected, (state, action) => {
         state.isLoading = false;
@@ -288,6 +348,8 @@ const authSlice = createSlice({
         state.error = null;
         state.token = null;
         state.tokenExpiry = null;
+
+        notifyExtension.logout();
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false;
@@ -358,9 +420,17 @@ const authSlice = createSlice({
       .addCase(handleAuthCallback.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
-        state.isAuthenticated = !!action.payload;
+        state.isAuthenticated = true;
         state.error = null;
         state.callbackHandled = true;
+
+        if (action.payload) {
+          notifyExtension.authSuccess(
+            action.payload,
+            action.payload.token || undefined,
+            action.payload.token_expiry || undefined,
+          );
+        }
       })
       .addCase(handleAuthCallback.rejected, (state, action) => {
         state.isLoading = false;
