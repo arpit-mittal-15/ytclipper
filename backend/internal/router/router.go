@@ -108,7 +108,7 @@ func SetupRouter(db *database.Database, cfg *config.Config) *gin.Engine {
 			{
 				timestampRoutes.POST("", timestampHandlers.CreateTimestamp)
 				timestampRoutes.GET("", timestampHandlers.GetAllTimestamps)
-				timestampRoutes.GET("/:videoId", timestampHandlers.GetAllTimestamps)
+				timestampRoutes.GET("/:videoId", timestampHandlers.GetTimestampsByVideoID)
 				timestampRoutes.DELETE("/:id", timestampHandlers.DeleteTimestamp)
 				timestampRoutes.POST("/delete-many", timestampHandlers.DeleteMultipleTimestamps)
 				timestampRoutes.GET("/videos", timestampHandlers.GetAllVideosWithTimestamps)
