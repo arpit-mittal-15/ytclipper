@@ -1,56 +1,122 @@
-import { Navigation } from '../components/layout/navigation';
-import { PageLayout } from '../components/layout/page-layout';
-import { VideoList } from '../components/video/video-list';
-import { useVideos } from '../hooks/use-videos';
-import { useAuth } from '../hooks/useAuth';
+import Loading from '@/components/loading';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserVideos } from '@/hooks/useVideos';
+import { formatTimestamp } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@ytclipper/ui';
+import { Calendar, Clock, Play } from 'lucide-react';
+import { Link } from 'react-router';
 
 export const VideosPage = () => {
   const { isAuthenticated } = useAuth();
-  const { videos, loading } = useVideos();
+  const { data: videosData, isLoading, error } = useUserVideos();
 
   if (!isAuthenticated) {
     return (
       <div className='min-h-screen bg-gray-50'>
-        <Navigation title='Videos' showBackButton />
-        <PageLayout
-          title='Access Denied'
-          description='Please log in to view your videos.'
-        >
-          <div className='text-center'>
-            <p className='text-gray-600'>
-              You need to be logged in to access this page.
-            </p>
-          </div>
-        </PageLayout>
+        <div className='p-8'>
+          <h1 className='text-2xl font-bold text-red-600'>Access Denied</h1>
+          <p className='text-gray-600 mt-2'>
+            Please log in to view your videos.
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  if (error) {
     return (
-      <div className='min-h-screen bg-gray-50'>
-        <Navigation title='Videos' showBackButton />
-        <PageLayout
-          title='Your Videos'
-          description='Manage and view your saved videos'
-        >
-          <div className='flex items-center justify-center py-12'>
-            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600' />
-          </div>
-        </PageLayout>
+      <div className='p-8'>
+        <h1 className='text-2xl font-bold text-red-600'>
+          Error loading videos
+        </h1>
+        <p className='text-gray-600 mt-2'>{error.message}</p>
       </div>
     );
   }
+
+  const videos = videosData?.videos || [];
 
   return (
-    <div className='min-h-screen bg-gray-50'>
-      <Navigation title='Videos' showBackButton />
-      <PageLayout
-        title='Your Videos'
-        description='Manage and view your saved videos'
-      >
-        <VideoList videos={videos} />
-      </PageLayout>
+    <div className='p-8 max-w-6xl mx-auto'>
+      <div className='mb-6'>
+        <h1 className='text-3xl font-bold mb-2'>Your Videos</h1>
+        <p className='text-gray-600'>
+          Videos you&apos;ve created timestamps for
+        </p>
+      </div>
+
+      {videos.length === 0 ? (
+        <div className='text-center py-12'>
+          <p className='text-gray-500 text-lg'>No videos found.</p>
+          <p className='text-gray-400 text-sm mt-2'>
+            Start adding timestamps to YouTube videos to see them here!
+          </p>
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          {videos.map((video) => (
+            <Link
+              key={video.video_id}
+              to={`/timestamps/${video.video_id}`}
+              className='block group'
+            >
+              <Card className='overflow-hidden hover:shadow-lg transition-all duration-200 group-hover:scale-[1.02]'>
+                <div className='relative'>
+                  <img
+                    src={`https://img.youtube.com/vi/${video.video_id}/maxresdefault.jpg`}
+                    alt={`Video ${video.video_id}`}
+                    className='w-full h-48 object-cover'
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`;
+                    }}
+                  />
+                  <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center'>
+                    <Play className='w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
+                  </div>
+                  <div className='absolute top-2 right-2 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-sm'>
+                    {video.timestamp_count} timestamps
+                  </div>
+                </div>
+                <CardHeader className='pb-2'>
+                  <CardTitle className='text-lg line-clamp-2 group-hover:text-blue-600 transition-colors'>
+                    Video: {video.video_id}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='pt-0'>
+                  <div className='space-y-2 text-sm text-gray-600'>
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center space-x-1'>
+                        <Clock className='w-4 h-4' />
+                        <span>{video.timestamp_count} timestamps</span>
+                      </div>
+                      <div className='flex items-center space-x-1'>
+                        <Calendar className='w-4 h-4' />
+                        <span>
+                          {new Date(video.latest_created).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {video.first_timestamp !== undefined &&
+                      video.last_timestamp !== undefined && (
+                        <div className='text-xs text-gray-500'>
+                          Duration:{' '}
+                          {formatTimestamp(Math.floor(video.first_timestamp))} -{' '}
+                          {formatTimestamp(Math.floor(video.last_timestamp))}
+                        </div>
+                      )}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

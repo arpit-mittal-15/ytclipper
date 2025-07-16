@@ -11,6 +11,7 @@ import {
   HomePage,
   LoginPage,
   ProfilePage,
+  TimestampsPage,
   VideoDetailPage,
   VideosPage,
 } from './pages';
@@ -89,6 +90,14 @@ const App = () => {
           element={
             <ProtectedRoute>
               <VideoDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/timestamps/:videoId'
+          element={
+            <ProtectedRoute>
+              <TimestampsPage />
             </ProtectedRoute>
           }
         />
