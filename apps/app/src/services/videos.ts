@@ -64,7 +64,9 @@ class VideosApiService {
 
   async getUserVideos(): Promise<GetUserVideosResponse> {
     console.log('🔍 Fetching user videos');
-    return await this.request<GetUserVideosResponse>('/api/v1/videos');
+    return await this.request<GetUserVideosResponse>(
+      '/api/v1/timestamps/videos',
+    );
   }
 }
 

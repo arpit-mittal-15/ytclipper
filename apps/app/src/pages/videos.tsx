@@ -65,20 +65,33 @@ export const VideosPage = () => {
               className='block group'
             >
               <Card className='overflow-hidden hover:shadow-lg transition-all duration-200 group-hover:scale-[1.02]'>
-                <div className='relative'>
+                <div className='relative w-full h-48 bg-gray-300 flex items-center justify-center'>
                   <img
-                    src={`https://img.youtube.com/vi/${video.video_id}/maxresdefault.jpg`}
+                    src={`https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`}
                     alt={`Video ${video.video_id}`}
-                    className='w-full h-48 object-cover'
+                    className='absolute inset-0 w-full h-full object-cover'
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = `https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`;
+                      if (target.src.includes('hqdefault')) {
+                        target.src = `https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`;
+                      } else if (target.src.includes('mqdefault')) {
+                        target.src = `https://img.youtube.com/vi/${video.video_id}/default.jpg`;
+                      } else {
+                        // If all thumbnails fail, hide the image and show placeholder
+                        target.style.display = 'none';
+                      }
                     }}
+                    loading='lazy'
                   />
-                  <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center'>
+                  {/* Fallback content when image fails */}
+                  <div className='text-gray-500 text-center z-10'>
+                    <Play className='w-16 h-16 mx-auto mb-2 opacity-50' />
+                    <p className='text-sm'>Video Thumbnail</p>
+                  </div>
+                  <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center z-20'>
                     <Play className='w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
                   </div>
-                  <div className='absolute top-2 right-2 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-sm'>
+                  <div className='absolute top-2 right-2 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-sm z-30'>
                     {video.timestamp_count} timestamps
                   </div>
                 </div>
