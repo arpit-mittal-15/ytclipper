@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +11,7 @@ import (
 	"github.com/shubhamku044/ytclipper/internal/auth"
 	"github.com/shubhamku044/ytclipper/internal/database"
 	"github.com/shubhamku044/ytclipper/internal/middleware"
+	"github.com/uptrace/bun"
 )
 
 type TimestampsHandlers struct {
@@ -41,6 +43,10 @@ type CreateTimestampRequest struct {
 	Title     string   `json:"title"`
 	Note      string   `json:"note"`
 	Tags      []string `json:"tags"`
+}
+
+type DeleteMultipleRequest struct {
+	IDs []string `json:"ids" binding:"required"`
 }
 
 func (t *TimestampsHandlers) CreateTimestamp(c *gin.Context) {
@@ -84,7 +90,7 @@ func (t *TimestampsHandlers) CreateTimestamp(c *gin.Context) {
 	})
 }
 
-func (t *TimestampsHandlers) GetTimestamps(c *gin.Context) {
+func (t *TimestampsHandlers) GetTimestampsByVideoID(c *gin.Context) {
 	userID, exists := auth.GetUserID(c)
 	if !exists {
 		middleware.RespondWithError(c, http.StatusUnauthorized, "NO_USER_ID", "User ID not found", nil)
@@ -98,12 +104,103 @@ func (t *TimestampsHandlers) GetTimestamps(c *gin.Context) {
 	}
 
 	timestamps := []Timestamp{}
+	err := t.db.DB.NewSelect().
+		Model(&timestamps).
+		Where("user_id = ? AND video_id = ? AND deleted_at IS NULL", userID, videoID).
+		Order("timestamp ASC").
+		Scan(context.Background())
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "DB_READ_ERROR", "Failed to fetch timestamps", gin.H{"error": err.Error()})
+		return
+	}
 
 	middleware.RespondWithOK(c, gin.H{
 		"timestamps": timestamps,
 		"video_id":   videoID,
-		"user_id":    userID,
 	})
+}
+
+func (t *TimestampsHandlers) GetAllTimestamps(c *gin.Context) {
+	userID, exists := auth.GetUserID(c)
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "NO_USER_ID", "User ID not found", nil)
+		return
+	}
+
+	var timestamps []Timestamp
+	err := t.db.DB.NewSelect().
+		Model(&timestamps).
+		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Order("created_at DESC").
+		Scan(context.Background())
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "DB_READ_ERROR", "Failed to fetch timestamps", gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.RespondWithOK(c, gin.H{"timestamps": timestamps})
+}
+
+func (t *TimestampsHandlers) GetAllVideosWithTimestamps(c *gin.Context) {
+	userID, exists := auth.GetUserID(c)
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "NO_USER_ID", "User ID not found", nil)
+		return
+	}
+
+	type VideoInfo struct {
+		VideoID string    `json:"video_id"`
+		Latest  time.Time `json:"latest_timestamp"`
+		Count   int       `json:"count"`
+	}
+
+	var videos []VideoInfo
+	err := t.db.DB.NewSelect().
+		Table("timestamps").
+		Column("video_id").
+		ColumnExpr("MAX(created_at) AS latest").
+		ColumnExpr("COUNT(*) AS count").
+		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Group("video_id").
+		OrderExpr("latest DESC").
+		Scan(context.Background(), &videos)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "DB_READ_ERROR", "Failed to fetch video list", gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.RespondWithOK(c, gin.H{"videos": videos})
+}
+
+func (t *TimestampsHandlers) GetRecentTimestamps(c *gin.Context) {
+	userID, exists := auth.GetUserID(c)
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "NO_USER_ID", "User ID not found", nil)
+		return
+	}
+
+	limit := 5
+	if param := c.Query("limit"); param != "" {
+		if parsed, err := strconv.Atoi(param); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	var timestamps []Timestamp
+	err := t.db.DB.NewSelect().
+		Model(&timestamps).
+		Where("user_id = ? AND deleted_at IS NULL", userID).
+		OrderExpr("created_at DESC").
+		Limit(limit).
+		Scan(context.Background())
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "DB_READ_ERROR", "Failed to fetch recent timestamps", gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	middleware.RespondWithOK(c, gin.H{"recent_timestamps": timestamps})
 }
 
 func (t *TimestampsHandlers) DeleteTimestamp(c *gin.Context) {
@@ -119,9 +216,48 @@ func (t *TimestampsHandlers) DeleteTimestamp(c *gin.Context) {
 		return
 	}
 
+	now := time.Now().UTC()
+	_, err := t.db.DB.NewUpdate().
+		Table("timestamps").
+		Set("deleted_at = ?", now).
+		Where("id = ? AND user_id = ?", timestampID, userID).
+		Exec(context.Background())
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "DB_DELETE_ERROR", "Failed to delete timestamp", gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.RespondWithOK(c, gin.H{"message": "Timestamp deleted successfully"})
+}
+
+func (t *TimestampsHandlers) DeleteMultipleTimestamps(c *gin.Context) {
+	userID, exists := auth.GetUserID(c)
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "NO_USER_ID", "User ID not found", nil)
+		return
+	}
+
+	var req DeleteMultipleRequest
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.IDs) == 0 {
+		middleware.RespondWithError(c, http.StatusBadRequest, "INVALID_REQUEST", "At least one timestamp ID must be provided", gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	now := time.Now().UTC()
+	_, err := t.db.DB.NewUpdate().
+		Table("timestamps").
+		Set("deleted_at = ?", now).
+		Where("id IN (?) AND user_id = ?", bun.In(req.IDs), userID).
+		Exec(context.Background())
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "DB_DELETE_ERROR", "Failed to delete timestamps", gin.H{"error": err.Error()})
+		return
+	}
+
 	middleware.RespondWithOK(c, gin.H{
-		"message":      "Timestamp deleted successfully",
-		"timestamp_id": timestampID,
-		"user_id":      userID,
+		"message": "Timestamps deleted successfully",
+		"count":   len(req.IDs),
 	})
 }
