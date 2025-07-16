@@ -2,6 +2,22 @@ import { logger } from '@ytclipper/extension-dev-utils';
 
 import { AuthMessage, AuthStorage, UserInfo } from '../types/auth';
 
+interface TimestampRequest {
+  video_id: string;
+  timestamp: number;
+  title: string;
+  note: string;
+  tags: string[];
+}
+
+interface ApiErrorResponse {
+  error?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+type ApiRequestData = TimestampRequest | Record<string, unknown>;
+
 logger.info('Background service worker started');
 
 const MY_DOMAIN = 'http://localhost:5173';
@@ -288,9 +304,9 @@ chrome.action.onClicked.addListener(async () => {
   }
 });
 
-async function postToBackend<T = any>(
+async function postToBackend<T = unknown>(
   url: string,
-  data: any,
+  data: ApiRequestData,
 ): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
     console.log('Post to backend');
@@ -304,19 +320,21 @@ async function postToBackend<T = any>(
     });
 
     if (!res.ok) {
-      const errRes = await res.json().catch(() => null);
+      const errRes = (await res
+        .json()
+        .catch(() => null)) as ApiErrorResponse | null;
       return {
         success: false,
-        error: errRes?.error || `HTTP ${res.status}`,
+        error: errRes?.error || errRes?.message || `HTTP ${res.status}`,
       };
     }
 
     const json = await res.json();
     return { success: true, data: json };
-  } catch (error: any) {
+  } catch (error: ApiErrorResponse | unknown) {
     return {
       success: false,
-      error: error.message || 'Unknown error',
+      error: (error as ApiErrorResponse)?.message || 'Unknown error',
     };
   }
 }

@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@ytclipper/ui';
+import { Link } from 'react-router';
 
 import LogoutButton from '../components/logout-button';
 import UserProfile from '../components/user-profile';
@@ -28,9 +29,11 @@ export const DashboardPage = () => {
           </CardHeader>
           <CardContent className='space-y-3'>
             <Button className='w-full'>Create New Clip</Button>
-            <Button variant='outline' className='w-full'>
-              Browse Clips
-            </Button>
+            <Link to='/videos' className='block'>
+              <Button variant='outline' className='w-full'>
+                View Your Videos
+              </Button>
+            </Link>
             <Button variant='outline' className='w-full'>
               Export History
             </Button>

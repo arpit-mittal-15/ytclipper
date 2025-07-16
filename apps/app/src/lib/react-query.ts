@@ -1,4 +1,4 @@
-import { authApi } from '@/services';
+import { authApi, timestampsApi, videosApi } from '@/services';
 import { QueryClient } from '@tanstack/react-query';
 
 // Create query client with optimized settings
@@ -54,8 +54,24 @@ export const authQueries = {
   }),
 };
 
+export const timestampsQueries = {
+  byVideo: (videoId: string) => ({
+    queryKey: queryKeys.timestamps.byVideo(videoId),
+    queryFn: () => timestampsApi.getTimestamps(videoId),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  }),
+};
+
+export const videosQueries = {
+  userVideos: () => ({
+    queryKey: queryKeys.videos.all,
+    queryFn: () => videosApi.getUserVideos(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  }),
+};
+
 queryClient.setMutationDefaults(['auth'], {
-  onError: error => {
+  onError: (error) => {
     console.error('Auth mutation error:', error);
   },
 });
