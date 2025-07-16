@@ -48,10 +48,20 @@ export interface AuthStorage {
 
 export type AuthMessage =
   | {
-      type: 'AUTH_TOKEN_UPDATE';
-      token: string;
-      expiry: number;
-      user: UserInfo;
-    }
+    type: 'AUTH_TOKEN_UPDATE';
+    token: string;
+    expiry: number;
+    user: UserInfo;
+  }
   | { type: 'AUTH_LOGOUT' }
-  | { type: 'CHECK_AUTH' };
+  | { type: 'CHECK_AUTH' }
+  | {
+    type: 'SAVE_TIMESTAMP';
+    data: {
+      videoId: string;
+      timestamp: number;
+      title: string;
+      note: string;
+      tags: string[];
+    };
+  };

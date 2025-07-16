@@ -44,6 +44,7 @@ func SetupRouter(db *database.Database, cfg *config.Config) *gin.Engine {
 	googleService := auth.NewGoogleOAuthService(&cfg.Google, &cfg.Auth, jwtService, db, &cfg.Server)
 	authMiddleware := auth.NewAuthMiddleware(jwtService, &cfg.Auth, db)
 	authHandlers := auth.NewAuthHandlers(googleService, authMiddleware, jwtService, emailService, db)
+	timestampHandlers := handlers.NewTimestampHandlers(db)
 
 	r.NoRoute(func(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusNotFound, "NOT_FOUND", "The requested resource could not be found", gin.H{
@@ -105,9 +106,9 @@ func SetupRouter(db *database.Database, cfg *config.Config) *gin.Engine {
 
 			timestampRoutes := protected.Group("/timestamps")
 			{
-				timestampRoutes.POST("", handlers.CreateTimestamp)
-				timestampRoutes.GET("/:videoId", handlers.GetTimestamps)
-				timestampRoutes.DELETE("/:id", handlers.DeleteTimestamp)
+				timestampRoutes.POST("", timestampHandlers.CreateTimestamp)
+				timestampRoutes.GET("/:videoId", timestampHandlers.GetTimestamps)
+				timestampRoutes.DELETE("/:id", timestampHandlers.DeleteTimestamp)
 			}
 		}
 	}

@@ -217,7 +217,10 @@ const Popup: React.FC = () => {
                 </div>
                 <div className='status-text'>
                   <h4>To use this extension</h4>
-                  <p>Please visit YouTube.com</p>
+                  <p>
+                    Please visit&nbsp;
+                    <a href='https://youtube.com'>YouTube.com</a>
+                  </p>
                 </div>
               </div>
             ) : !isOnVideoPage ? (

@@ -100,6 +100,8 @@
 
 .yt-clipper-form-group {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .yt-clipper-form-label {
@@ -110,7 +112,7 @@
 }
 
 .yt-clipper-form-input {
-  width: 100%;
+  width: auto;
   padding: 12px;
   border: 1px solid #333;
   border-radius: 6px;

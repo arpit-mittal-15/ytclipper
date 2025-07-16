@@ -554,7 +554,8 @@ class YouTubeHandler {
       return;
     }
 
-    // Collect tags
+    console.log(title, content, this.currentVideoId, this.currentTimestamp);
+
     const tags: string[] = [];
     this.tagsContainer?.querySelectorAll('.tag').forEach((tagEl) => {
       const tagText = tagEl.childNodes[0].textContent?.trim();
@@ -563,7 +564,6 @@ class YouTubeHandler {
       }
     });
 
-    // Save using existing functionality
     if (this.currentVideoId && this.currentTimestamp !== null) {
       chrome.runtime.sendMessage(
         {
