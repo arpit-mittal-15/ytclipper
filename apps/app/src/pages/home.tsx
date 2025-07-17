@@ -6,12 +6,20 @@ import {
   CardTitle,
 } from '@ytclipper/ui';
 import { Bookmark, Clock, Play, Share2 } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
 import { useAuth } from '../hooks/useAuth';
+import { useEffect } from 'react';
 
 export const HomePage = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
+      navigate('/videos');
+    }
+  }, [isAuthenticated, isInitialized, navigate]);
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100'>

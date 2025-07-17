@@ -222,6 +222,17 @@ class AuthApiService {
       return false;
     }
   }
+  async checkLoginStatus(): Promise<boolean> {
+    try {
+      await this.request<void>('/auth/status', {
+        method: 'GET',
+      });
+      return true;
+    } catch (error) {
+      console.warn('🔍 Not authenticated:', error);
+      return false;
+    }
+  }
 
   async refreshToken(): Promise<User> {
     try {

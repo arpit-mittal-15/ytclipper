@@ -37,13 +37,8 @@ const App = () => {
     }
   }, [isInitialized, isAuthenticated, user, token, tokenExpiry]);
 
-  // Set up automatic token refresh
   useEffect(() => {
-    console.log(token);
-
     if (isInitialized && isAuthenticated && !token) {
-      console.log('No token found, setting up immediate token refresh');
-      // console.log('Setting up token refresh mechanism');
       const cleanup = setupTokenRefresh();
       return cleanup;
     }

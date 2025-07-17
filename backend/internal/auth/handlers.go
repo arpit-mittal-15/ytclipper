@@ -154,6 +154,7 @@ func (h *AuthHandlers) SetupAuthRoutes(r *gin.Engine) {
 		auth.POST("/forgot-password", h.ForgotPasswordHandler)
 		auth.POST("/reset-password", h.ResetPasswordHandler)
 		auth.POST("/verify-email", h.VerifyEmailHandler)
+		auth.GET("/status", h.authMiddleware.RequireAuth(), h.AuthStatusHandler)
 
 		auth.POST("/add-password", h.authMiddleware.RequireAuth(), h.AddPasswordHandler)
 
@@ -467,6 +468,10 @@ func (h *AuthHandlers) VerifyEmailHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Email verified successfully. You can now login.",
 	})
+}
+
+func (h *AuthHandlers) AuthStatusHandler(c *gin.Context) {
+	c.Status(http.StatusNoContent)
 }
 
 // AddPasswordHandler allows users to add password authentication to their Google-only accounts

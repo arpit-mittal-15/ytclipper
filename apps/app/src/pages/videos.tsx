@@ -66,10 +66,17 @@ export const VideosPage = () => {
             >
               <Card className='overflow-hidden hover:shadow-lg transition-all duration-200 group-hover:scale-[1.02]'>
                 <div className='relative w-full h-48 bg-gray-300 flex items-center justify-center'>
+                  {/* Placeholder content - shows when image fails or is loading */}
+                  <div className='text-gray-500 text-center absolute inset-0 flex flex-col items-center justify-center'>
+                    <Play className='w-16 h-16 mx-auto mb-2 opacity-50' />
+                    <p className='text-sm'>Video Thumbnail</p>
+                  </div>
+
+                  {/* Actual thumbnail image */}
                   <img
                     src={`https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`}
                     alt={`Video ${video.video_id}`}
-                    className='absolute inset-0 w-full h-full object-cover'
+                    className='w-full h-full object-cover relative z-20'
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       if (target.src.includes('hqdefault')) {
@@ -77,29 +84,35 @@ export const VideosPage = () => {
                       } else if (target.src.includes('mqdefault')) {
                         target.src = `https://img.youtube.com/vi/${video.video_id}/default.jpg`;
                       } else {
-                        // If all thumbnails fail, hide the image and show placeholder
+                        // If all thumbnails fail, hide the image to show placeholder
                         target.style.display = 'none';
                       }
                     }}
+                    onLoad={(e) => {
+                      // When image loads successfully, it will cover the placeholder
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'block';
+                    }}
                     loading='lazy'
                   />
-                  {/* Fallback content when image fails */}
-                  <div className='text-gray-500 text-center z-10'>
-                    <Play className='w-16 h-16 mx-auto mb-2 opacity-50' />
-                    <p className='text-sm'>Video Thumbnail</p>
-                  </div>
-                  <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center z-20'>
+
+                  {/* Hover overlay */}
+                  <div className='absolute inset-0 bg-black/0 bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center z-30'>
                     <Play className='w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
                   </div>
+
+                  {/* Timestamp counter */}
                   <div className='absolute top-2 right-2 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-sm z-30'>
                     {video.timestamp_count} timestamps
                   </div>
                 </div>
+
                 <CardHeader className='pb-2'>
                   <CardTitle className='text-lg line-clamp-2 group-hover:text-blue-600 transition-colors'>
                     Video: {video.video_id}
                   </CardTitle>
                 </CardHeader>
+
                 <CardContent className='pt-0'>
                   <div className='space-y-2 text-sm text-gray-600'>
                     <div className='flex items-center justify-between'>
@@ -114,7 +127,6 @@ export const VideosPage = () => {
                         </span>
                       </div>
                     </div>
-
                     {video.first_timestamp !== undefined &&
                       video.last_timestamp !== undefined && (
                         <div className='text-xs text-gray-500'>
