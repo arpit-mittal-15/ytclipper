@@ -1,8 +1,8 @@
 import Loading from '@/components/loading';
-import { AddTimestampForm } from '@/components/timestamps/add-timestamp-form';
-import { TimestampsList } from '@/components/timestamps/timestamps-list';
+// import { AddTimestampForm } from '@/components/timestamps/add-timestamp-form';
+// import { TimestampsList } from '@/components/timestamps/timestamps-list';
 import { useTimestamps } from '@/hooks/useTimestamps';
-import { Card, CardContent, CardHeader, CardTitle } from '@ytclipper/ui';
+// import { Card, CardContent, CardHeader, CardTitle } from '@ytclipper/ui';
 import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
@@ -15,29 +15,28 @@ export const TimestampsPage = () => {
     note: '',
     tags: [],
   });
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState('');
-
   const {
     data: timestampsData,
     isLoading,
     error,
   } = useTimestamps(videoId || '');
 
-  const formatTimestamp = (seconds) => {
+  const formatTimestamp = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const handleTimestampClick = (timestampSeconds: number) => {
-    // In a real app, this would seek to the timestamp in the video player
-    console.log('Seeking to timestamp:', timestampSeconds);
-    // For now, we'll just log it
-    const minutes = Math.floor(timestampSeconds / 60);
-    const seconds = timestampSeconds % 60;
-    console.log(`Would seek to ${minutes}:${String(seconds).padStart(2, '0')}`);
-  };
+  // const handleTimestampClick = (timestampSeconds: number) => {
+  //   // In a real app, this would seek to the timestamp in the video player
+  //   console.log('Seeking to timestamp:', timestampSeconds);
+  //   // For now, we'll just log it
+  //   const minutes = Math.floor(timestampSeconds / 60);
+  //   const seconds = timestampSeconds % 60;
+  //   console.log(`Would seek to ${minutes}:${String(seconds).padStart(2, '0')}`);
+  // };
 
   if (!videoId) {
     return (
@@ -155,9 +154,10 @@ export const TimestampsPage = () => {
                       <div className='flex items-center gap-3'>
                         <button
                           className='text-blue-600 font-mono text-sm hover:underline'
-                          onClick={() =>
-                            console.log(`Jump to ${timestamp.timestamp}`)
-                          }
+                          onClick={() => {
+                            console.log(`Jump to ${timestamp.timestamp}`);
+                            setEditingId(timestamp.id);
+                          }}
                         >
                           {formatTimestamp(timestamp.timestamp)}
                         </button>
