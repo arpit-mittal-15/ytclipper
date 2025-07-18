@@ -15,8 +15,10 @@ export const TimestampsPage = () => {
     note: '',
     tags: [],
   });
+
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingNote, setEditingNote] = useState('');
+  const [editingNote, setEditingNote] = useState<string>('');
+
   const {
     data: timestampsData,
     isLoading,

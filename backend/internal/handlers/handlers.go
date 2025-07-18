@@ -18,6 +18,31 @@ type UserInfo struct {
 	CreatedAt string `json:"created_at,omitempty"`
 }
 
+// Timestamp represents a video timestamp
+// type Timestamp struct {
+// 	ID        string    `json:"id"`
+// 	VideoID   string    `json:"video_id"`
+// 	UserID    string    `json:"user_id"`
+// 	Timestamp float64   `json:"timestamp"`
+// 	Title     string    `json:"title"`
+// 	Note      string    `json:"note"`
+// 	Tags      []string  `json:"tags"`
+// 	CreatedAt time.Time `json:"created_at"`
+// 	UpdatedAt time.Time `json:"updated_at"`
+// }
+
+// // CreateTimestampRequest represents the request body for creating a timestamp
+// type CreateTimestampRequest struct {
+// 	VideoID    string   `json:"video_id" binding:"required"`
+// 	VideoTitle string   `json:"video_title"`
+// 	Timestamp  float64  `json:"timestamp" binding:"required"`
+// 	Title      string   `json:"title"`
+// 	Note       string   `json:"note"`
+// 	Tags       []string `json:"tags"`
+// }
+
+// HealthCheck returns the health status of the service
+
 func HealthCheck(c *gin.Context) {
 	middleware.RespondWithOK(c, gin.H{
 		"status":    "healthy",
