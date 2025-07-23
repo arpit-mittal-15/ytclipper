@@ -10,6 +10,8 @@ export const VideosPage = () => {
   const { isAuthenticated } = useAuth();
   const { data: videosData, isLoading, error } = useUserVideos();
 
+  console.log('isAuthenticated:', isAuthenticated);
+
   if (!isAuthenticated) {
     return (
       <div className='min-h-screen bg-gray-50'>

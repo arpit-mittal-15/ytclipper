@@ -82,35 +82,14 @@ class AuthApiService {
   }
 
   async getCurrentUser(): Promise<User | null> {
-    console.log('🔍 Fetching current user...');
-    if (!config.apiUrl) {
-      throw new Error('API URL is not configured');
-    }
-    console.log('🔍 API URL:', config.apiUrl);
-    console.log('🔍 Requesting user data from:', `${this.baseURL}/auth/me`);
-    // Attempt to fetch the current user
-    console.log('🔍 Making request to /auth/me');
     try {
-      const response = await this.request<{
-        user: Omit<User, 'token' | 'token_expiry'>;
-        access_token: string;
-        access_token_expiry: number;
-      }>('/auth/me');
-
-      const user: User = {
-        ...response.user,
-        token: response.access_token,
-        token_expiry: response.access_token_expiry,
-      };
-
-      return user;
+      const response = await this.request<{ user: User }>('/auth/me');
+      return response.user;
     } catch (error) {
-      console.log('❌ getCurrentUser error:', error);
       if (
         error instanceof Error &&
         (error.message.includes('401') || error.message.includes('NO_TOKEN'))
       ) {
-        console.log('🔍 Auth error detected, returning null');
         return null;
       }
       throw error;
@@ -118,22 +97,12 @@ class AuthApiService {
   }
 
   async login(credentials: LoginRequest): Promise<User> {
-    const response = await this.request<{
-      user: Omit<User, 'token' | 'token_expiry'>;
-      access_token?: string;
-      access_token_expiry?: number;
-    }>('/auth/login', {
+    const response = await this.request<{ user: User }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
 
-    const user: User = {
-      ...response.user,
-      token: response.access_token || null,
-      token_expiry: response.access_token_expiry || null,
-    };
-
-    return user;
+    return response.user;
   }
 
   async register(userData: RegisterRequest): Promise<User> {
@@ -146,11 +115,8 @@ class AuthApiService {
       body: JSON.stringify(userData),
     });
 
-    // Transform the response to match the expected User interface
     const user: User = {
       ...response.user,
-      token: response.access_token || null,
-      token_expiry: response.access_token_expiry || null,
     };
 
     return user;
@@ -236,35 +202,14 @@ class AuthApiService {
 
   async refreshToken(): Promise<User> {
     try {
-      console.log('🔍 Refreshing access token...');
-      const response = await this.request<{
-        user?: Omit<User, 'token' | 'token_expiry'>;
-        access_token: string;
-        refresh_token: string;
-        expires_in: number;
-      }>('/auth/refresh', {
+      await this.request<void>('/auth/refresh', {
         method: 'POST',
       });
 
-      if (!response.access_token) {
-        throw new Error('No access token received');
+      const user = await this.getCurrentUser();
+      if (!user) {
+        throw new Error('User not found after refresh');
       }
-
-      // If the response doesn't include user data, fetch it
-      let userData = response.user;
-      if (!userData) {
-        const userResponse = await this.getCurrentUser();
-        if (!userResponse) {
-          throw new Error('Failed to get user data after token refresh');
-        }
-        userData = userResponse;
-      }
-
-      const user: User = {
-        ...userData,
-        token: response.access_token,
-        token_expiry: Date.now() + response.expires_in * 1000,
-      };
 
       return user;
     } catch (error) {

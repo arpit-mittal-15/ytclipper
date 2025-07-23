@@ -1,11 +1,11 @@
 import { authApi, extensionMessaging } from '@/services';
 import type { User } from '@/types';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { purgeAuthState } from '@/lib/persist-helpers';
+import { clearAuthQueries, invalidateAuthQueries } from '@/lib/react-query';
 
 export interface AuthState {
   user: User | null;
-  token: string | null;
-  tokenExpiry: number | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -15,14 +15,25 @@ export interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  token: null,
-  tokenExpiry: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
   isInitialized: false,
   callbackHandled: false,
 };
+
+export const checkSession = createAsyncThunk(
+  'auth/checkSession',
+  async (_, thunkAPI) => {
+    try {
+      const user = await authApi.getCurrentUser(); // a `GET /me` or similar
+      return user; // valid session
+    } catch (err) {
+      console.warn('Session check failed:', err);
+      return thunkAPI.rejectWithValue('Session invalid');
+    }
+  },
+);
 
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
@@ -44,9 +55,8 @@ export const loginWithGoogle = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const { auth_url } = await authApi.loginWithGoogle();
-      // Redirect to Google OAuth
       window.location.href = auth_url;
-      return null; // We'll handle the result after redirect
+      return null;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : 'Google login failed',
@@ -186,7 +196,6 @@ export const handleAuthCallback = createAsyncThunk(
     try {
       const success = await authApi.handleAuthCallback();
       if (success) {
-        // Get the user data after successful OAuth
         const user = await authApi.getCurrentUser();
         console.log('user', user);
         return user;
@@ -256,7 +265,6 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Initialize auth
       .addCase(initializeAuth.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -264,21 +272,16 @@ const authSlice = createSlice({
       .addCase(initializeAuth.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
-        state.token = action.payload?.token || null;
-        state.tokenExpiry = action.payload?.token_expiry || null;
         state.isAuthenticated = !!action.payload;
         state.isInitialized = true;
         state.error = null;
         state.callbackHandled = true;
 
-        // Notify extension of auth state
         if (action.payload) {
-          notifyExtension.authUpdate(
-            action.payload,
-            action.payload.token || undefined,
-            action.payload.token_expiry || undefined,
-          );
+          notifyExtension.authUpdate(action.payload);
         }
+
+        invalidateAuthQueries();
       })
       .addCase(initializeAuth.rejected, (state, action) => {
         state.isLoading = false;
@@ -287,9 +290,11 @@ const authSlice = createSlice({
         state.isInitialized = true;
         state.callbackHandled = false;
         state.error = action.payload as string;
+
+        purgeAuthState();
+        clearAuthQueries();
       })
 
-      // Google login
       .addCase(loginWithGoogle.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -297,14 +302,12 @@ const authSlice = createSlice({
       .addCase(loginWithGoogle.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
-        // Don't set user here - will be set after redirect
       })
       .addCase(loginWithGoogle.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
 
-      // Email/password login
       .addCase(loginWithEmailPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -315,19 +318,13 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.error = null;
 
-        // Notify extension of successful login
-        notifyExtension.authSuccess(
-          action.payload,
-          action.payload.token || undefined,
-          action.payload.token_expiry || undefined,
-        );
+        notifyExtension.authSuccess(action.payload);
       })
       .addCase(loginWithEmailPassword.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
 
-      // Register
       .addCase(registerWithEmailPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -338,39 +335,33 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.error = null;
 
-        // Notify extension of successful registration
-        notifyExtension.authSuccess(
-          action.payload,
-          action.payload.token || undefined,
-          action.payload.token_expiry || undefined,
-        );
+        notifyExtension.authSuccess(action.payload);
       })
       .addCase(registerWithEmailPassword.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
 
-      // Logout
       .addCase(logout.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(logout.fulfilled, (state) => {
-        state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
         state.error = null;
-        state.token = null;
-        state.tokenExpiry = null;
+        state.isLoading = false;
 
         notifyExtension.logout();
+
+        purgeAuthState();
+        clearAuthQueries();
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
 
-      // Forgot password
       .addCase(forgotPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -384,7 +375,6 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Reset password
       .addCase(resetPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -398,7 +388,6 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Verify email
       .addCase(verifyEmail.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -412,7 +401,6 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Add password
       .addCase(addPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -426,7 +414,6 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Refresh token
       .addCase(refreshToken.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -434,25 +421,21 @@ const authSlice = createSlice({
       .addCase(refreshToken.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
-        state.token = action.payload.token;
-        state.tokenExpiry = action.payload.token_expiry;
         state.isAuthenticated = true;
         state.error = null;
 
         if (action.payload) {
-          notifyExtension.authUpdate(
-            action.payload,
-            action.payload.token || undefined,
-            action.payload.token_expiry || undefined,
-          );
+          notifyExtension.authUpdate(action.payload);
         }
       })
       .addCase(refreshToken.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+
+        purgeAuthState();
+        clearAuthQueries();
       })
 
-      // Handle auth callback
       .addCase(handleAuthCallback.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -465,17 +448,23 @@ const authSlice = createSlice({
         state.callbackHandled = true;
 
         if (action.payload) {
-          notifyExtension.authSuccess(
-            action.payload,
-            action.payload.token || undefined,
-            action.payload.token_expiry || undefined,
-          );
+          notifyExtension.authSuccess(action.payload);
         }
       })
       .addCase(handleAuthCallback.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
         state.callbackHandled = true;
+      })
+      .addCase(checkSession.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.isInitialized = true;
+      })
+      .addCase(checkSession.rejected, (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.isInitialized = true;
       });
   },
 });

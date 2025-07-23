@@ -2,12 +2,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  token: null | string;
-  token_expiry: null | number;
   picture?: string;
   email_verified: boolean;
-  provider?: string; // Add provider field from the API response
-  primary_provider?: string; // Keep for backward compatibility
+  provider?: string;
+  primary_provider?: string;
   auth_methods?: string[];
   has_password?: boolean;
   has_google_account?: boolean;

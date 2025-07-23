@@ -18,7 +18,7 @@ class VideosApiService {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = config.apiUrl;
+    this.baseURL = `${config.apiUrl}/api/v1/`;
   }
 
   private async request<T>(
@@ -26,13 +26,28 @@ class VideosApiService {
     options: RequestInit = {},
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
+    console.log('🍪 All cookies before request:', document.cookie);
+    const cookies = document.cookie.split(';').reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        if (key) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    console.log('🍪 Parsed cookies:', cookies);
+    console.log('🍪 Access token present:', !!cookies.access_token);
+    console.log('🍪 Refresh token present:', !!cookies.refresh_token);
     const config: RequestInit = {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      credentials: 'include', // Include cookies for authentication
+      credentials: 'include',
     };
 
     console.log('🔍 Making videos request to:', url);
@@ -64,9 +79,7 @@ class VideosApiService {
 
   async getUserVideos(): Promise<GetUserVideosResponse> {
     console.log('🔍 Fetching user videos');
-    return await this.request<GetUserVideosResponse>(
-      '/api/v1/timestamps/videos',
-    );
+    return await this.request<GetUserVideosResponse>('timestamps/videos');
   }
 }
 

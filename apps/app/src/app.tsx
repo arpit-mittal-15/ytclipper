@@ -17,33 +17,24 @@ import {
   VideosPage,
 } from './pages';
 import { syncAuthState } from './services/extension-sync';
+import { useAppDispatch } from './store/hooks';
+import { checkSession } from './store/slices/authSlice';
 
 const App = () => {
-  const { isInitialized, isAuthenticated, user, token, tokenExpiry } =
-    useAuth();
-  useEffect(() => {
-    if (isInitialized) {
-      syncAuthState(isAuthenticated, user)
-        .then((result) => {
-          if (result.success) {
-            console.log('✅ App-level extension sync successful');
-          } else {
-            console.warn('❌ App-level extension sync failed:', result.error);
-          }
-        })
-        .catch((error) => {
-          console.warn('❌ App-level extension sync error:', error);
-        });
-    }
-  }, [isInitialized, isAuthenticated, user, token, tokenExpiry]);
+  const { isInitialized, isAuthenticated, user } = useAuth();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated && !token) {
+    dispatch(checkSession());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
       const cleanup = setupTokenRefresh();
       return cleanup;
     }
     return undefined;
-  }, [isInitialized, isAuthenticated, token]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -57,7 +48,7 @@ const App = () => {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [user, isAuthenticated, tokenExpiry, token]);
+  }, [user, isAuthenticated]);
 
   if (!isInitialized) {
     return <Loading />;

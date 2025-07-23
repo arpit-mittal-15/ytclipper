@@ -1,14 +1,12 @@
 import { authApi, timestampsApi, videosApi } from '@/services';
 import { QueryClient } from '@tanstack/react-query';
 
-// Create query client with optimized settings
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
       retry: (failureCount, error) => {
-        // Don't retry on 401 errors (authentication issues)
         if (error instanceof Error && error.message.includes('401')) {
           return false;
         }
@@ -23,7 +21,6 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Query keys factory
 export const queryKeys = {
   auth: {
     user: ['auth', 'user'] as const,
